@@ -1,0 +1,119 @@
+# A VASP relaxation written to be read. Every table a directory package can use
+# appears here once, with the file it points to:
+#
+#   [workflow]                      identity, declaration, version requirements
+#   [workflow.runner]               run            (the runner and its steps)
+#   [workflow.inputs.structure]     instantiate.py (consumes it at submission)
+#   [workflow.parameters.*]         read by instantiate.py and run
+#   [workflow.outputs.*]            collect.py     (produces them after the run)
+#   [workflow.instantiate]          instantiate.py
+#   [workflow.collect]              collect.py
+#   [workflow.postprocess.summary]  scripts/summary
+#
+# This is a teaching example, not a production workflow: see
+# https://github.com/httk/workflows-vasp for those.
+
+[workflow]
+# The name is this workflow's registry key and the `workflow` of every job.
+# Referenced by git URI, the URI becomes the id and this becomes the short name.
+name = "examples.vasp-relax-annotated"
+description = "annotated teaching example: relax one structure with VASP"
+# The *declaration* says what this workflow is (its inputs and outputs, in
+# OPTIMADE vocabulary); declaration_uri is that document's `$id`. The git URI
+# a job is created from names the *definition* (this code) instead. The two are
+# independent: vasp-relax-bash-annotated is a different definition of the same
+# declared workflow, so it carries the same declaration.
+declaration_uri = "https://example.org/httk/workflows-examples/declarations/vasp-relax"
+declaration_file = "declaration.json"
+# Checked when a job is created and again when a manager claims it.
+# httk-atomistic provides the structure readers and writers the hooks use.
+requires = ["httk-workflow>=2.1.1", "httk-atomistic>=2.1.2"]
+
+[workflow.runner]
+entry = "run"
+# Must equal, as a set, the steps `run` registers (`./run --describe` lists them).
+steps = ["prepare", "run", "publish"]
+initial_step = "prepare"
+# "none": the persistent workdir is the result. "transactional" would give the
+# job a separate data/ directory that steps publish into with a.put(...).
+data_mode = "none"
+
+# An *input* is what the workflow operates on; it is part of the declaration
+# and becomes the input role of the recorded provenance. There is no
+# `destination` key, so the framework does not stage it anywhere itself: the
+# instantiate hook receives the supplied value (a path or a structure object)
+# and turns it into files/POSCAR. With `destination = "POSCAR"` the framework
+# would instead copy or write it to files/POSCAR and no hook would be needed.
+[workflow.inputs.structure]
+role = "initial_structure"
+entry_type = "structures"
+ref = "https://schemas.optimade.org/defs/v1.3/entrytypes/optimade/structures"
+description = "The structure to relax, as a file in any format httk can read or as a structure object."
+# required defaults to true because entry_type is set; spelled out for clarity.
+required = true
+
+# *Parameters* are this implementation's knobs. They are not part of the
+# declaration: changing one changes how carefully this workflow computes, not
+# what it computes. Declared parameters are type-checked at submission, and a
+# declared default is written into job.json when the caller gave no value.
+[workflow.parameters.kpoint_density]
+type = "number"
+default = 20.0
+description = "Automatic k-point density (points per inverse Angstrom)."
+
+[workflow.parameters.minimum_distance]
+type = "number"
+default = 0.5
+description = "Refuse structures with two atoms closer than this (Angstrom); checked by instantiate.py."
+
+[workflow.parameters.spin_polarized]
+type = "boolean"
+# No default on purpose: when the caller says nothing, instantiate.py decides
+# from the composition and records its decision in job.json.
+description = "Run spin-polarized (ISPIN = 2). Derived from the composition when not given."
+
+[workflow.parameters.incar_tags]
+type = "object"
+default = {}
+description = "Explicit INCAR tags; they win over everything the runner derives."
+
+[workflow.parameters.maximum_remedies]
+type = "integer"
+default = 2
+description = "How many automatic remedies the job may apply before it fails."
+
+[workflow.parameters.timeout]
+type = "number"
+default = 86400.0
+description = "Seconds one VASP execution may take."
+
+# *Outputs* are what collect.py returns, keyed by role. product_of says which
+# single entity an output is a property of: the relaxed structure derives from
+# the initial structure, and the energy is a property of the relaxed structure.
+[workflow.outputs.relaxed_structure]
+entry_type = "structures"
+role = "relaxed_structure"
+ref = "https://schemas.optimade.org/defs/v1.3/entrytypes/optimade/structures"
+description = "The relaxed geometry."
+product_of = "initial_structure"
+
+[workflow.outputs.total_energy]
+entry_type = "records"
+role = "total_energy"
+ref = "https://schemas.httk.org/defs/v0.1/properties/core/total_energy"
+description = "The final total energy of the relaxed structure (eV)."
+product_of = "relaxed_structure"
+
+# A .py hook runs in-process when the job is created (`httk job new`).
+[workflow.instantiate]
+file = "instantiate.py"
+
+# A .py hook runs in-process when the job is collected (`httk workflow collect`).
+[workflow.collect]
+file = "collect.py"
+
+# Postprocess scripts are optional executables run on request after collection:
+#   httk workflow postprocess --workflow-dir vasp-relax-annotated --script summary ...
+[workflow.postprocess.summary]
+file = "scripts/summary"
+description = "write summary.txt with the formula, spin choice, k-point density, and final energy"

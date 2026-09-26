@@ -1,0 +1,20 @@
+# The smallest useful workflow package: a name, a runner, and the version of
+# httk-workflow it needs. Everything else a manifest can say (inputs,
+# parameters, outputs, hooks, declarations) is optional;
+# vasp-relax-annotated/httk_workflow.toml shows all of it.
+
+[workflow]
+# The workflow's name. It is written into every job's job.json, and once this
+# package has been referenced by git URI it is also the short name that
+# selects it (`httk job new --workflow examples.hello`).
+name = "examples.hello"
+description = "write a greeting to a file: the smallest possible workflow"
+# The minimum distribution versions this workflow needs, checked when a job
+# is created and again when a manager claims it.
+requires = ["httk-workflow>=2.1.1"]
+
+[workflow.runner]
+# `run` (the only allowed entry name, so it may be omitted) is an executable in
+# this directory; here it is a Python program. `steps` must list exactly the
+# steps that runner registers; with a single step it is also the first one.
+steps = ["greet"]

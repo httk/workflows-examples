@@ -1,0 +1,128 @@
+#!/usr/bin/env python3
+"""Executable instantiate hook of examples.vasp-relax-bash-annotated.
+
+What this example shows: the language-neutral form of an instantiate hook.
+It does the same job as ``../vasp-relax-annotated/instantiate.py`` (validate
+the structure, stage ``files/POSCAR``, suggest a tag, derive
+``spin_polarized``), but instead of being imported and called with a Python
+object, it is *run* as a program and talks JSON. It happens to be Python here;
+a shell script with ``jq``, or a compiled program, would work the same way.
+
+The contract, for every executable hook:
+
+1. The framework copies (or, for a structure object, writes with an httk
+   writer) each hook-consumed input into the payload under
+   ``files/inputs/<input name>/``.
+2. It starts this program with the payload as current directory, removes all
+   inherited ``HTTK_WORKFLOW_*`` variables, and sets only
+   ``HTTK_WORKFLOW_WORKSPACE_DIR``.
+3. It writes ONE JSON request to stdin::
+
+       {"format": "httk-workflow-instantiate", "format_version": 2,
+        "workflow": "examples.vasp-relax-bash-annotated",
+        "tag": null,                                   # or the caller's --tag
+        "parameters": {"kpoint_density": 20.0, ...},   # declared defaults included
+        "inputs": {"structure": {"kind": "file", "path": "files/inputs/structure/POSCAR"}}}
+
+   An input descriptor is ``{"kind": "file", "path": ...}`` (payload-relative)
+   or ``{"kind": "value", "value": <JSON>}`` for a plain JSON value.
+4. The program may write files into the payload, and must print ONE JSON
+   response to stdout::
+
+       {"parameters": {...}, "tag": "si"}
+
+   ``parameters`` (required) is merged into the job's parameters; ``tag``
+   (optional) is used only when the caller gave none.
+5. A nonzero exit status refuses the job: nothing is submitted, and the
+   caller sees this program's stderr. So errors go to stderr, never stdout;
+   in Python, ``raise SystemExit("message")`` does exactly that.
+
+``httk.workflow.hookapi.instantiate_main`` implements steps 3-5 for Python
+hooks; it is spelled out by hand here so the envelope is visible.
+"""
+
+import json
+import math
+import sys
+from itertools import product
+from pathlib import Path
+
+import httk.core
+from httk.atomistic import UnitcellStructureView, atomic_number
+
+# The same crude heuristic as the Python twin; see instantiate.py there.
+MAGNETIC_ELEMENTS = frozenset({"Cr", "Mn", "Fe", "Co", "Ni", "Gd"})
+
+
+def main() -> int:
+    """Read the request, prepare the payload, and print the response."""
+
+    request = json.load(sys.stdin)
+    if request.get("format") != "httk-workflow-instantiate" or request.get("format_version") != 2:
+        raise SystemExit(
+            f"unexpected request format {request.get('format')!r} version {request.get('format_version')!r}"
+        )
+    parameters = request["parameters"]
+
+    descriptor = request["inputs"].get("structure")
+    if descriptor is None:
+        raise SystemExit("examples.vasp-relax-bash-annotated needs a structure: pass --input structure=FILE")
+    if descriptor["kind"] != "file":
+        raise SystemExit("the structure input must be a structure file or object, not a plain JSON value")
+    path = Path(descriptor["path"])  # relative to the payload, our current directory
+
+    # Read and validate, exactly as the Python hook does.
+    is_vasp = path.name.startswith(("POSCAR", "CONTCAR")) or path.suffix == ".vasp"
+    try:
+        structure = UnitcellStructureView(httk.core.load(str(path), **({"precision": 5e-4} if is_vasp else {})))
+    except Exception as exc:
+        raise SystemExit(f"cannot read the structure {path.name}: {exc}") from exc
+    if structure.nsites < 1:
+        raise SystemExit("the structure has no atoms")
+    for symbol in structure.elements:
+        try:
+            atomic_number(symbol)
+        except ValueError:
+            raise SystemExit(f"the structure contains {symbol!r}, which is not a chemical element") from None
+    minimum = float(parameters["minimum_distance"])
+    shortest = shortest_distance(structure)
+    if shortest < minimum:
+        raise SystemExit(
+            f"two atoms are only {shortest:.3f} Angstrom apart, closer than minimum_distance = {minimum}; "
+            "check the structure, or lower the minimum_distance parameter if this is intended"
+        )
+
+    # Stage the POSCAR the Bash runner reads (paths are payload-relative).
+    Path("files").mkdir(exist_ok=True)
+    httk.core.save(structure, "files/POSCAR")
+
+    # Derive a parameter only when the caller did not set it. Returning the
+    # full parameter mapping is fine: it is merged over the job's parameters.
+    if "spin_polarized" not in parameters:
+        parameters["spin_polarized"] = bool(MAGNETIC_ELEMENTS & set(structure.elements))
+    response = {"parameters": parameters}
+    # Suggest a tag; the framework ignores it when the caller gave --tag.
+    tag = "".join(character for character in structure.chemical_formula_reduced.lower() if character.isalnum())
+    if tag:
+        response["tag"] = tag[:48]
+    print(json.dumps(response))
+    return 0
+
+
+def shortest_distance(structure) -> float:
+    """The shortest interatomic distance, including the 26 neighbouring periodic images."""
+
+    lattice = structure.lattice_vectors
+    positions = structure.cartesian_site_positions
+    shortest = math.inf
+    for cell in product((-1, 0, 1), repeat=3):
+        shift = [sum(n * lattice[axis][k] for axis, n in enumerate(cell)) for k in range(3)]
+        for i, first in enumerate(positions):
+            for j, second in enumerate(positions):
+                if i != j or cell != (0, 0, 0):
+                    shortest = min(shortest, math.dist(first, [second[k] + shift[k] for k in range(3)]))
+    return shortest
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

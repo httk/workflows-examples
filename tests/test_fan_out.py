@@ -1,0 +1,39 @@
+"""examples.fan-out: children are spawned, gathered, and aggregated."""
+
+import json
+from pathlib import Path
+
+from httk.workflow import Workspace
+
+from conftest import REPO_ROOT, run_one
+
+
+def _children(workspace: Workspace, parent: str) -> dict[str, str]:
+    """Map each child's tag to its terminal kind."""
+
+    return {
+        marker.job_key.split("--")[0]: marker.kind for marker in workspace.scan_markers() if marker.job_key != parent
+    }
+
+
+def test_fan_out_spawns_one_child_per_value_and_sums_their_squares(tmp_path: Path) -> None:
+    workspace = Workspace.initialize(tmp_path / "workspace")
+    marker, payload = run_one(workspace, REPO_ROOT / "fan-out", parameters={"values": [2, 3, 4]})
+    assert marker.kind == "succeeded"
+    summary = json.loads((payload / "run" / "summary.json").read_text(encoding="utf-8"))
+    assert summary["sum_of_squares"] == 4 + 9 + 16
+    assert summary["children"]["value-1"] == {"value": 3, "square": 9}
+    assert _children(workspace, marker.job_key) == {
+        "value-0": "succeeded",
+        "value-1": "succeeded",
+        "value-2": "succeeded",
+    }
+
+
+def test_a_failing_child_routes_the_parent_to_report_failures(tmp_path: Path) -> None:
+    workspace = Workspace.initialize(tmp_path / "workspace")
+    marker, _payload = run_one(workspace, REPO_ROOT / "fan-out", parameters={"values": [1, "two"]})
+    assert marker.kind == "failed"
+    failure = workspace.read_state(marker)["failure"]
+    assert failure["code"] == "examples.children_failed"
+    assert failure["details"]["failed"] == {"value-1": "examples.not_a_number"}

@@ -1,0 +1,21 @@
+# A workflow that uses another workflow: it calls examples.hello (the `hello`
+# package of this repository) as a child job and builds on its result.
+
+[workflow]
+name = "examples.compose"
+description = "call another workflow by git URI, wait for it, and use its result"
+requires = ["httk-workflow>=2.1.1"]
+
+[workflow.runner]
+steps = ["start", "finish", "dependency_failed"]
+initial_step = "start"
+
+[workflow.parameters.hello_workflow]
+type = "string"
+default = "git+https://github.com/httk/workflows-examples#hello"
+description = "The workflow to call: a git URI, a short name, or a package directory."
+
+[workflow.parameters.name]
+type = "string"
+default = "composer"
+description = "Who the called workflow greets."

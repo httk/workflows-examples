@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Postprocess script `summary` of examples.vasp-relax-bash-annotated.
+#
+# The Bash twin of ../vasp-relax-annotated/scripts/summary. A postprocess script
+# is any executable; it is not a runner, so it does not source the runner API.
+# It runs in its own output directory (also $HTTK_WORKFLOW_POSTPROCESS_DIR) and
+# finds the job through $HTTK_WORKFLOW_JOB_DIR (read-only) and
+# $HTTK_WORKFLOW_WORKDIR. Run it with:
+#
+#   httk workflow postprocess --workspace WS --workflow-dir vasp-relax-bash-annotated --script summary
+set -euo pipefail
+
+workdir=${HTTK_WORKFLOW_WORKDIR:-$HTTK_WORKFLOW_JOB_DIR/run}
+
+# The last "F=" line of OSZICAR carries the final free energy of the relaxation;
+# "+ 0" makes awk print VASP's -.10500000E+02 as -10.5.
+energy=$(awk '/ F= / { value = $3 + 0 } END { if (value != "") print value }' "$workdir/OSZICAR" 2>/dev/null || true)
+# POSCAR lines 6 and 7 (VASP 5 format) hold the species and their counts.
+formula=$(awk 'NR == 6 { n = split($0, symbols) } NR == 7 { for (i = 1; i <= n; i++) printf "%s%s", symbols[i], $i }' \
+    "$workdir/POSCAR")
+
+{
+    printf 'job:          %s\n' "$(basename "$HTTK_WORKFLOW_JOB_DIR")"
+    printf 'formula:      %s\n' "$formula"
+    printf 'final energy: %s eV\n' "${energy:-unavailable}"
+} >summary.txt

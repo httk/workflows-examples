@@ -1,0 +1,10 @@
+# The same smallest workflow as ../hello, with a Bash runner. The manifest does
+# not say which language `run` is written in: any executable will do.
+
+[workflow]
+name = "examples.hello-bash"
+description = "write a greeting to a file, in Bash"
+requires = ["httk-workflow>=2.1.1"]
+
+[workflow.runner]
+steps = ["greet"]

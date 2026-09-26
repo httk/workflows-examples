@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# examples.hello-bash: the smallest possible Bash workflow, step for step the
+# same as ../hello/run.
+#
+# What this example shows:
+#
+#   * the manager exports $HTTK_WORKFLOW_BASH_API, the path of the Bash runner
+#     library; sourcing it gives you the httk_workflow_* functions;
+#   * httk_workflow_runner declares the workflow name and its steps, and each
+#     step NAME is implemented by a function called step_NAME;
+#   * httk_workflow_main dispatches the step the manager asked for;
+#   * outcome functions (httk_workflow_succeed, _advance, _retry, _fail) *return*:
+#     let the step function end after calling one, do not `exit`.
+set -euo pipefail
+source "$HTTK_WORKFLOW_BASH_API"
+
+# Must match `[workflow] name` and `[workflow.runner] steps` in httk_workflow.toml.
+httk_workflow_runner examples.hello-bash greet
+
+step_greet() {
+    local name
+    # One job parameter, with a default for when the job did not set it.
+    name=$(httk_workflow_parameter name world)
+    # A step starts in the job's workdir, so a relative path lands there.
+    printf 'Hello, %s!\n' "$name" >greeting.txt
+    httk_workflow_succeed
+}
+
+httk_workflow_main
