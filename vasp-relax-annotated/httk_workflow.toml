@@ -2,13 +2,13 @@
 # appears here once, with the file it points to:
 #
 #   [workflow]                      identity, declaration, version requirements
-#   [workflow.runner]               run            (the runner and its steps)
+#   [workflow.runner]               run.py         (the runner and its steps)
 #   [workflow.inputs.structure]     instantiate.py (consumes it at submission)
-#   [workflow.parameters.*]         read by instantiate.py and run
+#   [workflow.parameters.*]         read by instantiate.py and run.py
 #   [workflow.outputs.*]            collect.py     (produces them after the run)
 #   [workflow.instantiate]          instantiate.py
 #   [workflow.collect]              collect.py
-#   [workflow.postprocess.summary]  scripts/summary
+#   [workflow.postprocess.summary]  scripts/summary.py
 #
 # This is a teaching example, not a production workflow: see
 # https://github.com/httk/workflows-vasp for those.
@@ -30,8 +30,8 @@ declaration_file = "declaration.json"
 requires = ["httk-workflow>=2.1.1", "httk-atomistic>=2.1.2"]
 
 [workflow.runner]
-entry = "run"
-# Must equal, as a set, the steps `run` registers (`./run --describe` lists them).
+entry = "run.py"
+# Must equal, as a set, the steps run.py registers (`./run.py --describe` lists them).
 steps = ["prepare", "run", "publish"]
 initial_step = "prepare"
 # "none": the persistent workdir is the result. "transactional" would give the
@@ -55,7 +55,10 @@ required = true
 # *Parameters* are this implementation's knobs. They are not part of the
 # declaration: changing one changes how carefully this workflow computes, not
 # what it computes. Declared parameters are type-checked at submission, and a
-# declared default is written into job.json when the caller gave no value.
+# declared default is written into job.json when the caller gave no value. The
+# instantiate hook runs before the defaults are applied: it sees only the
+# caller-supplied parameters, with the declared defaults alongside, so it can
+# tell "not given" from "given" for every parameter, defaulted or not.
 [workflow.parameters.kpoint_density]
 type = "number"
 default = 20.0
@@ -68,8 +71,10 @@ description = "Refuse structures with two atoms closer than this (Angstrom); che
 
 [workflow.parameters.spin_polarized]
 type = "boolean"
-# No default on purpose: when the caller says nothing, instantiate.py decides
-# from the composition and records its decision in job.json.
+# When the caller says nothing, instantiate.py turns this on for a structure
+# with a magnetic element; otherwise the default applies. Either way the
+# decision is recorded in job.json.
+default = false
 description = "Run spin-polarized (ISPIN = 2). Derived from the composition when not given."
 
 [workflow.parameters.incar_tags]
@@ -115,5 +120,5 @@ file = "collect.py"
 # Postprocess scripts are optional executables run on request after collection:
 #   httk workflow postprocess --workflow-dir vasp-relax-annotated --script summary ...
 [workflow.postprocess.summary]
-file = "scripts/summary"
+file = "scripts/summary.py"
 description = "write summary.txt with the formula, spin choice, k-point density, and final energy"

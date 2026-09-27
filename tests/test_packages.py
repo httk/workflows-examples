@@ -14,9 +14,14 @@ from conftest import PACKAGES, REPO_ROOT
 @pytest.mark.parametrize("directory", PACKAGES)
 def test_package_loads_and_its_steps_equal_the_runners_own_description(directory: str) -> None:
     provider = load_workflow_package(REPO_ROOT / directory, register=False)
-    assert provider.entry == "run"
-    assert os.access(REPO_ROOT / directory / "run", os.X_OK)
-    described = describe_runner(REPO_ROOT / directory / "run")
+    # Every package names a descriptive entry (run.py or run.sh), which the
+    # manifest records as the one-element runner command; no bare `run` remains.
+    (command,) = provider.command
+    entry = REPO_ROOT / directory / command.removeprefix("{package}/")
+    assert entry.suffix in {".py", ".sh"}
+    assert not (REPO_ROOT / directory / "run").exists()
+    assert os.access(entry, os.X_OK)
+    described = describe_runner(entry)
     assert set(described["steps"]) == set(provider.steps)
     assert described["workflow"] == provider.workflow_id == f"examples.{directory}"
 

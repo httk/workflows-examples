@@ -133,7 +133,8 @@ def test_overlapping_atoms_are_refused_at_submission(tmp_path: Path, directory: 
 @pytest.mark.parametrize("directory", PACKAGES)
 def test_a_missing_structure_is_refused_at_submission(tmp_path: Path, directory: str) -> None:
     workspace = mock_vasp_workspace(tmp_path / "workspace")
-    with pytest.raises(ValueError, match="needs a structure"):
+    # The framework refuses a missing required input before any hook runs.
+    with pytest.raises(ValueError, match="'structure' is required and was not supplied"):
         run_one(workspace, REPO_ROOT / directory)
 
 

@@ -10,7 +10,14 @@ What this example shows:
   it, and decides itself what lands in the payload;
 * it can refuse a job by raising: the job is then never created, and the
   person submitting it sees the error immediately;
-* it can fill in a job tag and record derived parameters in ``job.json``.
+* it can fill in a job tag and record derived parameters in ``job.json``;
+* it sees which parameters the *caller* supplied: ``context.parameters`` holds
+  only those, while the declared defaults sit apart in ``context.defaults``
+  and fill in every parameter still absent after the hook returns.
+
+The framework has already done two things before this hook runs: it refused
+the job if a required input (here ``structure``) was not supplied, so the hook
+never has to check for it, and it type-checked the supplied parameters.
 
 Why do this at submission rather than in the runner's first step? The hook
 runs on the submitting machine, right away, with the caller watching. The
@@ -53,20 +60,22 @@ def instantiate(context):
     :param context: The ``httk.workflow.scaffold.InstantiateContext`` of the job being created.
         ``context.payload`` is the payload directory under construction,
         ``context.inputs`` the supplied inputs (read-only), ``context.parameters``
-        the job parameters (mutable; declared defaults are already filled in),
-        and ``context.tag`` the caller's tag or ``None``.
-    :raises ValueError: If the structure is missing, unreadable, or fails validation;
+        the parameters the caller supplied (mutable), ``context.defaults`` the
+        declared parameter defaults (read-only), and ``context.tag`` the
+        caller's tag or ``None``.
+    :raises ValueError: If the structure is unreadable or fails validation;
         the job is then not created.
     """
 
-    # 1. Read the input. The declared input is required, but that check runs
-    #    after this hook, so a missing value is reported here in plain words.
-    if "structure" not in context.inputs:
-        raise ValueError("examples.vasp-relax-annotated needs a structure: pass --input structure=FILE")
+    # 1. Read the input. The input is declared required, and the framework
+    #    refuses a job without it before calling this hook, so it is here.
     structure = _as_structure(context.inputs["structure"])
 
-    # 2. Validate it. Parameters with a declared default are always present here.
-    _validate(structure, minimum_distance=float(context.parameters["minimum_distance"]))
+    # 2. Validate it. A parameter the caller did not supply is not yet in
+    #    context.parameters (its default is applied after this hook), so the
+    #    effective value is the caller's, else the declared default.
+    minimum_distance = context.parameters.get("minimum_distance", context.defaults["minimum_distance"])
+    _validate(structure, minimum_distance=float(minimum_distance))
 
     # 3. Write the structure into the payload with the httk writer registered
     #    for the name POSCAR. files/ is where payload inputs conventionally live;
@@ -83,12 +92,15 @@ def instantiate(context):
     if tag:
         context.suggest_tag(tag)
 
-    # 5. Derive a parameter the caller did not set. spin_polarized is declared
-    #    without a default precisely so that "not given" can be told apart from
-    #    "given as false". Whatever is decided is written into job.json with the
-    #    other parameters, so the choice is recorded, not re-guessed later.
-    if "spin_polarized" not in context.parameters:
-        context.parameters["spin_polarized"] = bool(MAGNETIC_ELEMENTS & set(structure.elements))
+    # 5. Derive a parameter the caller did not set. spin_polarized declares a
+    #    default (false), yet "not given" is still distinguishable from "given
+    #    as false": only a caller-supplied value is in context.parameters. When
+    #    the caller said nothing and the structure has a magnetic element, the
+    #    hook turns it on; otherwise it leaves the parameter absent and the
+    #    declared default fills it in after the hook. Either way the value ends
+    #    up in job.json, so the choice is recorded, not re-guessed later.
+    if "spin_polarized" not in context.parameters and MAGNETIC_ELEMENTS & set(structure.elements):
+        context.parameters["spin_polarized"] = True
 
 
 def _as_structure(value):
@@ -104,10 +116,11 @@ def _as_structure(value):
         if not path.is_file():
             raise ValueError(f"the structure file {path} does not exist")
         # httk recommends an explicit precision for VASP files, whose coordinates
-        # carry no uncertainty of their own; other readers do not take it.
-        is_vasp = path.name.startswith(("POSCAR", "CONTCAR")) or path.suffix == ".vasp"
+        # carry no uncertainty of their own. Every structure reader accepts the
+        # argument (a CIF states its own precision and ignores it), so the hook
+        # passes it without caring which format it was given.
         try:
-            value = httk.core.load(str(path), **({"precision": 5e-4} if is_vasp else {}))
+            value = httk.core.load(str(path), precision=5e-4)
         except Exception as exc:
             raise ValueError(f"cannot read the structure file {path}: {exc}") from exc
     try:

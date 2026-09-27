@@ -6,9 +6,10 @@ test:
 test-extended:
 	HTTK_TEST_PROFILE=extended python3 -m pytest -q tests
 
-# ruff reaches the suffix-less Python runners through extend-include in
-# pyproject.toml; the Bash runners and scripts are syntax-checked here.
-BASH_EXECUTABLES = hello-bash/run vasp-relax-bash-annotated/run vasp-relax-bash-annotated/scripts/summary
+# ruff reaches the suffix-less executable instantiate hook through
+# extend-include in pyproject.toml; the Bash runners and scripts are
+# syntax-checked here.
+BASH_EXECUTABLES = hello-bash/run.sh vasp-relax-bash-annotated/run.sh vasp-relax-bash-annotated/scripts/summary.sh
 
 lint:
 	python3 -m ruff format --check .

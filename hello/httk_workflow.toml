@@ -14,7 +14,10 @@ description = "write a greeting to a file: the smallest possible workflow"
 requires = ["httk-workflow>=2.1.1"]
 
 [workflow.runner]
-# `run` (the only allowed entry name, so it may be omitted) is an executable in
-# this directory; here it is a Python program. `steps` must list exactly the
-# steps that runner registers; with a single step it is also the first one.
+# The executable in this directory that the manager runs; here a Python
+# program. Any executable member will do: without `entry` the manager runs a
+# file called `run`, but a descriptive name such as run.py or run.sh says what
+# the file is and keeps editors and linters working. `steps` must list exactly
+# the steps that runner registers; with a single step it is also the first one.
+entry = "run.py"
 steps = ["greet"]

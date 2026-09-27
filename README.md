@@ -20,7 +20,7 @@ Read them in this order. Each one adds a few ideas to the one before.
 | --- | --- | --- |
 | [`hello`](hello) | `examples.hello` | The smallest workflow: a minimal manifest and a one-step Python runner that reads a parameter, writes a file, and succeeds. |
 | [`hello-bash`](hello-bash) | `examples.hello-bash` | The same in Bash: sourcing the Bash runner API, `step_` functions, outcome functions that return. |
-| [`vasp-relax-annotated`](vasp-relax-annotated) | `examples.vasp-relax-annotated` | The centerpiece. A VASP relaxation with every hook real: an `instantiate.py` that reads, validates and stages the input structure, derives a tag and a parameter; a three-step runner on `httk.workflow.vasp` with a short remedy loop; a `collect.py` that reads the energy and relaxed structure itself; a postprocess script; an external declaration; declared parameters. |
+| [`vasp-relax-annotated`](vasp-relax-annotated) | `examples.vasp-relax-annotated` | The centerpiece. A VASP relaxation with every hook real: an `instantiate.py` that reads, validates and stages the input structure, derives a tag and a parameter (telling a caller-supplied value from a declared default); a three-step runner on `httk.workflow.codes.vasp` with a short remedy loop; a `collect.py` that reads the energy and relaxed structure itself; a postprocess script; an external declaration; declared parameters. |
 | [`vasp-relax-bash-annotated`](vasp-relax-bash-annotated) | `examples.vasp-relax-bash-annotated` | The same declared workflow with a Bash runner on the Bash VASP API and an *executable* instantiate hook speaking the JSON stdin/stdout contract. |
 | [`fan-out`](fan-out) | `examples.fan-out` | One job spawns one child job per value (`ChildSpec` + `spawn`), gathers them, and aggregates their results; a failing child routes the parent to a triage step. |
 | [`compose`](compose) | `examples.compose` | A workflow that calls another workflow (`hello`, by git URI) with `Attempt.call`, waits for it, and builds on its result. Its default URI needs network access and the pushed repository (see below). |
@@ -69,7 +69,7 @@ httk job new --workflow-dir ./fan-out --parameter 'values=[1, 2, 3, 4]'
 httk workflow run
 ```
 
-A runner describes itself without running anything: `./hello/run --describe`.
+A runner describes itself without running anything: `./hello/run.py --describe`.
 
 `compose` calls `hello` by its default URI,
 `git+https://github.com/httk/workflows-examples#hello`, which needs network
@@ -100,13 +100,13 @@ metadata):
 | --- | --- | --- | --- |
 | `[workflow]` (`name`, `description`, `requires`) | — | `requires` is checked at submission and at claim | all |
 | `[workflow] declaration_uri`, `declaration_file` | `declaration.json` | carried into every job | `vasp-relax-annotated` |
-| `[workflow.runner]` (`steps`, `initial_step`, `data_mode`) | `run` (any executable) | once per attempt, by a manager | all |
+| `[workflow.runner]` (`entry`, `steps`, `initial_step`, `data_mode`) | the `entry` member, here `run.py` or `run.sh` (any executable; `run` when `entry` is omitted) | once per attempt, by a manager | all |
 | `[workflow.inputs.NAME]` | — (staged to `destination`, or consumed by the instantiate hook) | at submission | `vasp-relax-annotated` |
-| `[workflow.parameters.NAME]` | — (read by hooks and runner) | type-checked, defaults applied at submission | `vasp-relax-annotated`, `fan-out`, `compose` |
+| `[workflow.parameters.NAME]` | — (read by hooks and runner) | type-checked at submission; defaults applied after the instantiate hook | `vasp-relax-annotated`, `fan-out`, `compose` |
 | `[workflow.outputs.NAME]` | — (produced by the collect hook) | at collection | `vasp-relax-annotated` |
-| `[workflow.instantiate] file` | `instantiate.py` (in-process) or `instantiate` (executable, JSON) | at submission, on the submitting machine | both VASP examples |
+| `[workflow.instantiate] file` | `instantiate.py` (in-process) or `instantiate` (executable, JSON; any name without `.py`) | at submission, on the submitting machine, after the required-input check | both VASP examples |
 | `[workflow.collect] file` | `collect.py` (in-process) or an executable (JSON lines) | at `httk workflow collect` | both VASP examples |
-| `[workflow.postprocess.NAME]` | any executable | on request, after collection | both VASP examples |
+| `[workflow.postprocess.NAME]` | any executable (`scripts/summary.py`, `scripts/summary.sh`) | on request, after collection | both VASP examples |
 
 A few distinctions the examples keep coming back to:
 
@@ -143,7 +143,7 @@ and the *Native Bash runner API*.
 ```console
 make test                    # or: python3 -m pytest -q tests
 make test-extended           # also the alternative input forms
-make lint                    # ruff format/check (including the suffix-less runners) and bash -n
+make lint                    # ruff format/check (including the suffix-less instantiate hook) and bash -n
 ```
 
 The tests drive every package end to end through the real APIs: they create

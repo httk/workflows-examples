@@ -1,5 +1,5 @@
 # One job that fans out into one child job per value, waits for all of them,
-# and aggregates what they produced. See the comments in `run`.
+# and aggregates what they produced. See the comments in `run.py`.
 
 [workflow]
 name = "examples.fan-out"
@@ -7,6 +7,7 @@ description = "spawn one child per value, gather them, and aggregate their resul
 requires = ["httk-workflow>=2.1.1"]
 
 [workflow.runner]
+entry = "run.py"
 # Every step the parent *and* its children run lives in this one runner: the
 # children start at `square`, the parent at `start`.
 steps = ["start", "square", "aggregate", "report_failures"]

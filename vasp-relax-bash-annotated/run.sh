@@ -6,7 +6,7 @@
 #   * the Bash runner library ($HTTK_WORKFLOW_BASH_API) plus the Bash VASP API
 #     ($HTTK_WORKFLOW_VASP_BASH_API): every httk_workflow_* / httk_vasp_*
 #     function is a thin call into the same implementation the Python runner
-#     ../vasp-relax-annotated/run uses, so the two publish the same results;
+#     ../vasp-relax-annotated/run.py uses, so the two publish the same results;
 #   * how a Bash step reads parameters (httk_workflow_parameter), settings
 #     (httk_workflow_setting) and job state (httk_workflow_state_get), and how
 #     it ends with exactly one outcome (advance / retry / succeed / fail);
@@ -48,10 +48,10 @@ step_prepare() {
     fi
 
     # Start from an empty INCAR with ISPIN from the spin_polarized parameter
-    # (the instantiate hook always sets it: the caller's value or its own).
-    # Parameters are read without defaults: those declared with a default in
-    # httk_workflow.toml are already in job.json, so a fallback here would
-    # only be a second copy that can drift. ISPIN goes
+    # (the caller's value, the instantiate hook's derived one, or the declared
+    # default). Parameters are read without defaults: every parameter declared
+    # with a default in httk_workflow.toml is already in job.json, so a
+    # fallback here would only be a second copy that can drift. ISPIN goes
     # in first because the NBANDS estimate reads it; incar_tags are applied
     # by httk_vasp_prepare afterwards, so an explicit ISPIN there still wins.
     : >INCAR

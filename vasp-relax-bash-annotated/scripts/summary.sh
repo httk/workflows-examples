@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Postprocess script `summary` of examples.vasp-relax-bash-annotated.
 #
-# The Bash twin of ../vasp-relax-annotated/scripts/summary. A postprocess script
+# The Bash twin of ../vasp-relax-annotated/scripts/summary.py. A postprocess script
 # is any executable; it is not a runner, so it does not source the runner API.
 # It runs in its own output directory (also $HTTK_WORKFLOW_POSTPROCESS_DIR) and
 # finds the job through $HTTK_WORKFLOW_JOB_DIR (read-only) and

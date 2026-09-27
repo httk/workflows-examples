@@ -2,7 +2,7 @@
 # inputs, parameters, outputs, and declaration), a different definition. Two
 # things differ and are the point of this package:
 #
-#   * `run` is a Bash runner on the Bash VASP API;
+#   * `run.sh` is a Bash runner on the Bash VASP API;
 #   * `instantiate` is an *executable* hook, the language-neutral form: the
 #     framework sends it one JSON request on stdin and reads one JSON response
 #     from stdout (see the comments in that file). Any executable works.
@@ -27,8 +27,8 @@ declaration_file = "declaration.json"
 requires = ["httk-workflow>=2.1.1", "httk-atomistic>=2.1.2"]
 
 [workflow.runner]
-entry = "run"
-# Must equal, as a set, the steps `run` registers (`./run --describe` lists them).
+entry = "run.sh"
+# Must equal, as a set, the steps run.sh registers (`./run.sh --describe` lists them).
 steps = ["prepare", "run", "publish"]
 initial_step = "prepare"
 # "none": the persistent workdir is the result. "transactional" would give the
@@ -53,7 +53,10 @@ required = true
 # *Parameters* are this implementation's knobs. They are not part of the
 # declaration: changing one changes how carefully this workflow computes, not
 # what it computes. Declared parameters are type-checked at submission, and a
-# declared default is written into job.json when the caller gave no value.
+# declared default is written into job.json when the caller gave no value. The
+# instantiate hook runs before the defaults are applied: it sees only the
+# caller-supplied parameters, with the declared defaults alongside, so it can
+# tell "not given" from "given" for every parameter, defaulted or not.
 [workflow.parameters.kpoint_density]
 type = "number"
 default = 20.0
@@ -66,8 +69,10 @@ description = "Refuse structures with two atoms closer than this (Angstrom); che
 
 [workflow.parameters.spin_polarized]
 type = "boolean"
-# No default on purpose: when the caller says nothing, the instantiate hook decides
-# from the composition and records its decision in job.json.
+# When the caller says nothing, the instantiate hook turns this on for a
+# structure with a magnetic element; otherwise the default applies. Either way
+# the decision is recorded in job.json.
+default = false
 description = "Run spin-polarized (ISPIN = 2). Derived from the composition when not given."
 
 [workflow.parameters.incar_tags]
@@ -103,7 +108,10 @@ description = "The final total energy of the relaxed structure (eV)."
 product_of = "relaxed_structure"
 
 # A member without the .py suffix is an executable hook (it must be chmod +x).
-# It runs as a subprocess when the job is created (`httk job new`).
+# It runs as a subprocess when the job is created (`httk job new`). The suffix
+# is what selects the form, so this executable, although written in Python,
+# must not be called instantiate.py: that name would select the in-process
+# hook of ../vasp-relax-annotated instead.
 [workflow.instantiate]
 file = "instantiate"
 
@@ -114,5 +122,5 @@ file = "collect.py"
 # Postprocess scripts are optional executables run on request after collection:
 #   httk workflow postprocess --workflow-dir vasp-relax-bash-annotated --script summary ...
 [workflow.postprocess.summary]
-file = "scripts/summary"
+file = "scripts/summary.sh"
 description = "write summary.txt with the formula, spin choice, k-point density, and final energy"

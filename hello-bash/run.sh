@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # examples.hello-bash: the smallest possible Bash workflow, step for step the
-# same as ../hello/run.
+# same as ../hello/run.py.
 #
 # What this example shows:
 #

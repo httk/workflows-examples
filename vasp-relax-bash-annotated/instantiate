@@ -10,34 +10,43 @@ a shell script with ``jq``, or a compiled program, would work the same way.
 
 The contract, for every executable hook:
 
-1. The framework copies (or, for a structure object, writes with an httk
-   writer) each hook-consumed input into the payload under
-   ``files/inputs/<input name>/``.
-2. It starts this program with the payload as current directory, removes all
-   inherited ``HTTK_WORKFLOW_*`` variables, and sets only
-   ``HTTK_WORKFLOW_WORKSPACE_DIR``.
-3. It writes ONE JSON request to stdin::
+1. The framework refuses the job before this program starts if a required
+   input (here ``structure``) was not supplied, and type-checks the supplied
+   parameters, so the hook checks neither.
+2. It copies (or, for a structure object, writes with an httk writer) each
+   hook-consumed input into the payload under ``files/inputs/<input name>/``.
+3. It starts this program with the payload as current directory, removes all
+   inherited ``HTTK_WORKFLOW_*`` variables, sets only
+   ``HTTK_WORKFLOW_WORKSPACE_DIR``, and puts the directory of its own Python
+   interpreter first on ``PATH``, so ``#!/usr/bin/env python3`` finds the
+   Python that has httk installed.
+4. It writes ONE JSON request to stdin::
 
-       {"format": "httk-workflow-instantiate", "format_version": 2,
+       {"format": "httk-workflow-instantiate", "format_version": 3,
         "workflow": "examples.vasp-relax-bash-annotated",
         "tag": null,                                   # or the caller's --tag
-        "parameters": {"kpoint_density": 20.0, ...},   # declared defaults included
+        "parameters": {"kpoint_density": 30.0},        # only what the caller supplied
+        "defaults": {"kpoint_density": 20.0, "minimum_distance": 0.5, ...},
         "inputs": {"structure": {"kind": "file", "path": "files/inputs/structure/POSCAR"}}}
 
-   An input descriptor is ``{"kind": "file", "path": ...}`` (payload-relative)
-   or ``{"kind": "value", "value": <JSON>}`` for a plain JSON value.
-4. The program may write files into the payload, and must print ONE JSON
+   ``parameters`` holds only caller-supplied values, so the hook can tell
+   "not given" from "given" even for a parameter with a declared default;
+   ``defaults`` holds the declared defaults, which the framework applies
+   after the hook to every parameter still absent. An input descriptor is
+   ``{"kind": "file", "path": ...}`` (payload-relative) or
+   ``{"kind": "value", "value": <JSON>}`` for a plain JSON value.
+5. The program may write files into the payload, and must print ONE JSON
    response to stdout::
 
        {"parameters": {...}, "tag": "si"}
 
    ``parameters`` (required) is merged into the job's parameters; ``tag``
    (optional) is used only when the caller gave none.
-5. A nonzero exit status refuses the job: nothing is submitted, and the
+6. A nonzero exit status refuses the job: nothing is submitted, and the
    caller sees this program's stderr. So errors go to stderr, never stdout;
    in Python, ``raise SystemExit("message")`` does exactly that.
 
-``httk.workflow.hookapi.instantiate_main`` implements steps 3-5 for Python
+``httk.workflow.hookapi.instantiate_main`` implements steps 4-6 for Python
 hooks; it is spelled out by hand here so the envelope is visible.
 """
 
@@ -58,23 +67,23 @@ def main() -> int:
     """Read the request, prepare the payload, and print the response."""
 
     request = json.load(sys.stdin)
-    if request.get("format") != "httk-workflow-instantiate" or request.get("format_version") != 2:
+    if request.get("format") != "httk-workflow-instantiate" or request.get("format_version") != 3:
         raise SystemExit(
             f"unexpected request format {request.get('format')!r} version {request.get('format_version')!r}"
         )
-    parameters = request["parameters"]
+    parameters = request["parameters"]  # caller-supplied only
+    defaults = request["defaults"]  # declared defaults, applied after this hook
 
-    descriptor = request["inputs"].get("structure")
-    if descriptor is None:
-        raise SystemExit("examples.vasp-relax-bash-annotated needs a structure: pass --input structure=FILE")
+    # The required structure input is always present: the framework checked.
+    descriptor = request["inputs"]["structure"]
     if descriptor["kind"] != "file":
         raise SystemExit("the structure input must be a structure file or object, not a plain JSON value")
     path = Path(descriptor["path"])  # relative to the payload, our current directory
 
-    # Read and validate, exactly as the Python hook does.
-    is_vasp = path.name.startswith(("POSCAR", "CONTCAR")) or path.suffix == ".vasp"
+    # Read and validate, exactly as the Python hook does. precision= is
+    # accepted by every structure reader, so no format sniffing is needed.
     try:
-        structure = UnitcellStructureView(httk.core.load(str(path), **({"precision": 5e-4} if is_vasp else {})))
+        structure = UnitcellStructureView(httk.core.load(str(path), precision=5e-4))
     except Exception as exc:
         raise SystemExit(f"cannot read the structure {path.name}: {exc}") from exc
     if structure.nsites < 1:
@@ -84,7 +93,8 @@ def main() -> int:
             atomic_number(symbol)
         except ValueError:
             raise SystemExit(f"the structure contains {symbol!r}, which is not a chemical element") from None
-    minimum = float(parameters["minimum_distance"])
+    # The caller's value if given, else the declared default.
+    minimum = float(parameters.get("minimum_distance", defaults["minimum_distance"]))
     shortest = shortest_distance(structure)
     if shortest < minimum:
         raise SystemExit(
@@ -96,10 +106,12 @@ def main() -> int:
     Path("files").mkdir(exist_ok=True)
     httk.core.save(structure, "files/POSCAR")
 
-    # Derive a parameter only when the caller did not set it. Returning the
-    # full parameter mapping is fine: it is merged over the job's parameters.
-    if "spin_polarized" not in parameters:
-        parameters["spin_polarized"] = bool(MAGNETIC_ELEMENTS & set(structure.elements))
+    # Derive a parameter only when the caller did not set it, and only to
+    # turn it on: left absent, the declared default (false) fills it in.
+    # Returning the caller's mapping plus the derived value is fine: it is
+    # merged over the job's parameters.
+    if "spin_polarized" not in parameters and MAGNETIC_ELEMENTS & set(structure.elements):
+        parameters["spin_polarized"] = True
     response = {"parameters": parameters}
     # Suggest a tag; the framework ignores it when the caller gave --tag.
     tag = "".join(character for character in structure.chemical_formula_reduced.lower() if character.isalnum())

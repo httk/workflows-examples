@@ -2,8 +2,11 @@
 
 The same file as ``../vasp-relax-annotated/collect.py``: the Bash runner leaves
 the same files in its workdir, and a collect hook does not care which
-language the runner was written in. (It could itself be an executable
-following the JSON-lines collect contract; see the README.)
+language the runner was written in. A collect hook could itself be an
+executable following the JSON-lines collect contract, answering
+``{"total_energy": {"value": -10.5}}`` for the energy; this one stays in
+Python because its other output, the relaxed structure, is an httk structure
+object, which the in-process form returns directly.
 
 What this example shows:
 
@@ -18,7 +21,7 @@ What this example shows:
   output into the collected provenance ``Run`` and adds the ``product_of``
   edges the manifest declares, so the hook only has to produce values.
 
-The production workflows delegate to ``httk.workflow.vasp.collect``; this
+The production workflows delegate to ``httk.workflow.codes.vasp.collect``; this
 hook does the reading itself with the httk file readers, to show that there
 is nothing more to it.
 """

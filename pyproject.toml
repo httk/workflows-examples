@@ -2,13 +2,7 @@
 target-version = "py312"
 src = ["tests"]
 line-length = 120
-# The runners, executable hooks, and postprocess scripts carry no .py suffix;
-# naming them here makes `ruff check .` and `ruff format --check .` cover them.
-extend-include = [
-    "hello/run",
-    "vasp-relax-annotated/run",
-    "vasp-relax-annotated/scripts/summary",
-    "vasp-relax-bash-annotated/instantiate",
-    "fan-out/run",
-    "compose/run",
-]
+# The executable instantiate hook is Python but must not carry a .py suffix
+# (that would select the in-process hook form); naming it here makes
+# `ruff check .` and `ruff format --check .` cover it.
+extend-include = ["vasp-relax-bash-annotated/instantiate"]

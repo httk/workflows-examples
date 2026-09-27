@@ -1,5 +1,6 @@
 # The same smallest workflow as ../hello, with a Bash runner. The manifest does
-# not say which language `run` is written in: any executable will do.
+# not say which language the entry is written in: any executable will do. The
+# .sh suffix is only for the reader (and editors); the #! line decides.
 
 [workflow]
 name = "examples.hello-bash"
@@ -7,4 +8,5 @@ description = "write a greeting to a file, in Bash"
 requires = ["httk-workflow>=2.1.1"]
 
 [workflow.runner]
+entry = "run.sh"
 steps = ["greet"]

@@ -13,7 +13,7 @@ What this example shows:
   runner reads it without a fallback of its own) and *settings*
   (``a.setting``: facts about the machine the job happens to run on, such as
   the VASP command, looked up when the step runs);
-* the ``httk.workflow.vasp`` primitives: prepare the inputs, run VASP under
+* the ``httk.workflow.codes.vasp`` primitives: prepare the inputs, run VASP under
   supervision, and plan and apply a remedy when VASP fails in a known way.
 
 The flow is::
@@ -36,7 +36,7 @@ import shlex
 import shutil
 
 from httk.workflow import Attempt, Runner
-from httk.workflow.vasp import (
+from httk.workflow.codes.vasp import (
     VaspPreparationOptions,
     apply_vasp_remedy,
     clean_vasp_outputs,
@@ -78,12 +78,14 @@ def prepare(a: Attempt) -> None:
     # The INCAR starts empty; prepare_vasp_inputs derives EDIFF, EDIFFG, MAGMOM
     # (and NBANDS when a POTCAR exists). incar_tags are written first and are
     # never overwritten by a derived value, so the caller always has the last
-    # word. ISPIN comes from the spin_polarized parameter, which instantiate.py
-    # filled in when the caller did not; an explicit incar_tags ISPIN wins.
+    # word. ISPIN comes from the spin_polarized parameter: the caller's value,
+    # instantiate.py's derived one, or the declared default, in that order of
+    # precedence; an explicit incar_tags ISPIN wins over all three.
     (a.workdir / "INCAR").write_text("", encoding="utf-8")
-    # No fallback defaults below: declared defaults are already in job.json,
-    # and spin_polarized (declared without one) is always set by instantiate.py.
-    # A missing name would raise KeyError, which is what should happen.
+    # No fallback defaults below: every declared default is already in
+    # job.json by the time a runner starts (the framework applies them after
+    # the instantiate hook). A missing name would raise KeyError, which is
+    # what should happen.
     tags = {"ISPIN": 2 if a.parameter("spin_polarized") else 1}
     tags.update(a.parameter("incar_tags"))
     options = VaspPreparationOptions(
