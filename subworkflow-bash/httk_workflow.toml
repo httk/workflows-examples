@@ -19,14 +19,14 @@ steps = ["start", "aggregate", "report_failures"]
 initial_step = "start"
 
 [workflow.parameters.values]
-# A string of space-separated numbers rather than an array: a JSON array needs
-# a JSON parser to take apart, which plain Bash does not have. A string splits
-# with `read -ra`.
-type = "string"
-default = "1 4 9"
-description = "Space-separated numbers; one call of the child workflow per value."
+# The same JSON array as ../subworkflow's; run.sh takes it apart with
+# httk_workflow_parameter_items, one element per line, so plain Bash needs no
+# JSON parser.
+type = "array"
+default = [1, 4, 9]
+description = "The numbers to take roots of; one call of the child workflow per value."
 
-[workflow.parameters.child_workflow]
-type = "string"
-default = "examples.subworkflow-child"
-description = "The workflow to call: a registered or installed name, or a pinned git URI."
+# The same declared dependency as ../subworkflow (see the comments there):
+# run.sh calls the alias `child`.
+[workflow.calls]
+child = "examples.subworkflow-child"

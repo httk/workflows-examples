@@ -29,7 +29,16 @@ type = "array"
 default = [1, 4, 9]
 description = "One call of the child workflow per value."
 
-[workflow.parameters.child_workflow]
-type = "string"
-default = "examples.subworkflow-child"
-description = "The workflow to call: a registered or installed name, or a pinned git URI."
+# The workflows this one calls, by alias. The runner calls `child`, never a
+# workflow name: `a.call("child", ...)`. Declaring the dependency makes it
+# known before anything runs:
+#   * `httk job new` refuses a job whose declared call does not resolve;
+#   * a manager does not claim the job until `examples.subworkflow-child` is
+#     installed (and, were it compiled, built) on its machine; `httk job why`
+#     and `httk workflow precheck` say what is missing;
+#   * at run time the job may call only what is declared here.
+# To call a workflow from a git repository instead, put its commit-pinned git
+# URI here, not in the code or a parameter:
+#   child = "git+https://github.com/httk/workflows-examples@<full commit>#subworkflow-child"
+[workflow.calls]
+child = "examples.subworkflow-child"

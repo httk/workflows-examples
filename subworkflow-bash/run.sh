@@ -4,9 +4,13 @@
 #
 # What this example shows:
 #
-#   * httk_workflow_call LABEL WORKFLOW --parameter NAME=VALUE creates a child
-#     job of *another* workflow (here examples.subworkflow-child, a Python
-#     workflow) and prints its job key;
+#   * httk_workflow_parameter_items NAME prints the elements of a JSON-array
+#     parameter one per line, so `values = [1, 4, 9]` becomes a Bash array
+#     with mapfile;
+#   * httk_workflow_call LABEL child --parameter NAME=VALUE creates a child
+#     job of *another* workflow and prints its job key. `child` is the alias
+#     httk_workflow.toml declares in [workflow.calls] for
+#     examples.subworkflow-child, a Python workflow;
 #   * httk_workflow_gather waits for the calls, and httk_workflow_children
 #     lists them, one tab-separated row each, in the step it resumes at;
 #   * aggregating is reading each child's root.txt from its workdir.
@@ -16,13 +20,16 @@
 # child of a *different*, complete workflow with its own runner, parameters,
 # declaration and failure handling. Both are gathered and read the same way.
 #
-# The called name is resolved when `start` runs, on the machine where the
-# manager runs this step, as `httk job new --workflow NAME` would resolve it
-# there: the child workflow must be registered or installed on that machine
-# (e.g. `httk plugin install` of this repository). A git URI pinned to a
-# commit works as well, and is fetched on first use:
+# Why declare what is called: the dependency is known before anything runs.
+# `httk job new` refuses a job whose declared call does not resolve; a manager
+# does not claim the job until the child workflow is installed (and built, if
+# compiled) on its machine (`httk job why` / `httk workflow precheck` explain);
+# and at run time only declared calls are allowed. Install the child where the
+# job runs (e.g. `httk plugin install` of this repository). To call a workflow
+# from git, put the commit-pinned URI in [workflow.calls], not in this script
+# or a parameter:
 #
-#     git+https://github.com/httk/workflows-examples@<full commit>#subworkflow-child
+#     child = "git+https://github.com/httk/workflows-examples@<full commit>#subworkflow-child"
 #
 # Called children live in this job's workspace, belong to this job, and move
 # with it when it is transferred; a child cannot be transferred on its own.
@@ -43,17 +50,20 @@ source "$HTTK_WORKFLOW_BASH_API"
 httk_workflow_runner examples.subworkflow-bash start aggregate report_failures
 
 step_start() {
-    local child_workflow value index=0
+    local value index=0
     local -a values
-    child_workflow=$(httk_workflow_parameter child_workflow)
-    read -ra values <<<"$(httk_workflow_parameter values)"
+    # One element per line: numbers as JSON (4, 2.5), strings raw.
+    mapfile -t values < <(httk_workflow_parameter_items values)
+    # A process substitution hides its exit status; `wait` recovers it, so
+    # set -e aborts the step on a missing or non-array parameter.
+    wait $!
     for value in "${values[@]}"; do
         # --parameter NAME=VALUE: VALUE is stored as JSON when it parses as
         # JSON, so `value=4` is the number 4 the child's manifest asks for. The
         # parameters are checked against the child workflow's manifest right
-        # here. The label names the child in httk_workflow_children and becomes
+        # here. `child` is the declared alias. The label names the child in httk_workflow_children and becomes
         # its job tag; the printed job key is not needed now.
-        httk_workflow_call "value-$index" "$child_workflow" --parameter value="$value" >/dev/null
+        httk_workflow_call "value-$index" child --parameter value="$value" >/dev/null
         index=$((index + 1))
     done
     # Job state survives the wait; gather itself takes no state.

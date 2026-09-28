@@ -1,9 +1,11 @@
-"""examples.chain: Python calls Rust calls Python, all by name.
+"""examples.chain: Python calls Rust calls Python, through declared calls.
 
-The Rust middle is a compiled package: the test builds and registers it in the
-workspace with ``httk workflow build`` (what a user runs once per machine) and
-skips when cargo or make is missing. All three names resolve through this
-working tree installed as a plugin (the ``installed_examples`` fixture).
+The Rust middle is a compiled package. Each package declares what it calls in
+``[workflow.calls]``, so a chain job is left unclaimed until chain-rust is
+built, and ``httk workflow build examples.chain`` builds it transitively (what
+a user runs once per machine). The test skips when cargo or make is missing.
+All three names resolve through this working tree installed as a plugin (the
+``installed_examples`` fixture).
 """
 
 import json
@@ -12,9 +14,12 @@ from pathlib import Path
 import pytest
 from httk.core.cli import CLIContext
 from httk.workflow import Workspace
+from httk.workflow._calls import reset_call_readiness
+from httk.workflow.precheck import precheck_jobs
+from httk.workflow.scaffold import new_job
 from httk.workflow.workflow_cli import command
 
-from conftest import REPO_ROOT, register_ws, require_toolchain, run_one
+from conftest import register_ws, require_toolchain, run_idle
 
 DECLARATIONS = "https://example.org/httk/workflows-examples/declarations"
 
@@ -24,12 +29,28 @@ def test_the_trail_propagates_up_a_python_rust_python_chain(tmp_path: Path) -> N
     require_toolchain("chain-rust")
     workspace = Workspace.initialize(tmp_path / "workspace")
     name = register_ws(workspace.root)
-    # Register the Rust binary; the registration is keyed by the source
-    # digest, so it serves the plugin's installed copy of the same sources.
-    assert command(["build", "--workspace", name, str(REPO_ROOT / "chain-rust")], CLIContext("httk", tmp_path)) == 0
+    # Managers cache which declared calls are ready; start from a clean slate.
+    reset_call_readiness()
+    created = new_job(workspace, "examples.chain")
+    job = json.loads((created.payload / "job.json").read_text(encoding="utf-8"))
+    assert job["calls"] == {"middle": "examples.chain-rust"}
 
-    marker, payload = run_one(workspace, REPO_ROOT / "chain")
-    assert marker.kind == "succeeded", workspace.read_state(marker).get("failure")
+    # chain-rust is declared but not built here: the job is never claimed, and
+    # precheck (what `httk job why` / `httk workflow precheck` report) says why.
+    run_idle(workspace)
+    marker = workspace.find_marker_by_id(created.job_id)
+    assert marker is not None and marker.kind in {"submitted", "ready"}
+    (finding,) = [item for item in precheck_jobs(workspace) if item["job_id"] == created.job_id]
+    assert "not built" in str(finding["calls"]) and "examples.chain-rust" in str(finding["calls"])
+
+    # Building the top workflow by name builds everything it declares it calls.
+    assert command(["build", "--workspace", name, "examples.chain"], CLIContext("httk", tmp_path)) == 0
+    reset_call_readiness()
+    run_idle(workspace)
+
+    marker = workspace.find_marker_by_id(created.job_id)
+    assert marker is not None and marker.kind == "succeeded", workspace.read_state(marker).get("failure")
+    payload = workspace.payload_path(marker.placement, marker.job_key)
     assert (payload / "run" / "trail.txt").read_text(encoding="utf-8") == (
         "examples.chain-leaf (Python)\nexamples.chain-rust (Rust)\nexamples.chain (Python)\n"
     )

@@ -25,12 +25,6 @@ CHILD = "examples.subworkflow-child"
 DECLARATIONS = "https://example.org/httk/workflows-examples/declarations"
 
 
-def _values(directory: str, values: list[int]) -> object:
-    """The ``values`` parameter in each parent's form: a JSON array, or a Bash word list."""
-
-    return values if directory == "subworkflow" else " ".join(str(value) for value in values)
-
-
 def _children(workspace: Workspace, parent: Marker) -> dict[str, Marker]:
     """Every job in the workspace other than *parent*, by its tag (the call's label)."""
 
@@ -49,7 +43,6 @@ def _aggregated(directory: str, payload: Path) -> tuple[dict[str, tuple[str, flo
     run = payload / "run"
     if directory == "subworkflow":
         summary = json.loads((run / "summary.json").read_text(encoding="utf-8"))
-        assert summary["child_workflow"] == CHILD
         children = {label: (child["job_key"], child["root"]) for label, child in summary["children"].items()}
         return children, summary["sum_of_roots"]
     rows = [line.split("\t") for line in (run / "summary.tsv").read_text(encoding="utf-8").splitlines()]
@@ -61,7 +54,7 @@ def _aggregated(directory: str, payload: Path) -> tuple[dict[str, tuple[str, flo
 @pytest.mark.parametrize("directory", PARENTS)
 def test_parent_calls_the_child_workflow_per_value_and_sums_their_roots(tmp_path: Path, directory: str) -> None:
     workspace = Workspace.initialize(tmp_path / "workspace")
-    marker, payload = run_one(workspace, REPO_ROOT / directory, parameters={"values": _values(directory, [4, 9, 16])})
+    marker, payload = run_one(workspace, REPO_ROOT / directory, parameters={"values": [4, 9, 16]})
     assert marker.kind == "succeeded", workspace.read_state(marker).get("failure")
 
     # Each call is an ordinary job of the *called* workflow, carrying that
@@ -77,6 +70,8 @@ def test_parent_calls_the_child_workflow_per_value_and_sums_their_roots(tmp_path
         assert declarations["workflow"]["$id"] == (
             "https://example.org/httk/workflows-examples/declarations/subworkflow-child"
         )
+    # The parent's job recorded its declared calls at creation.
+    assert _job(workspace, marker)["calls"] == {"child": CHILD}
     parent_declarations = _job(workspace, marker)["declarations"]
     assert isinstance(parent_declarations, dict)
     assert parent_declarations["workflow"]["$id"] == (
@@ -101,7 +96,7 @@ def test_parent_calls_the_child_workflow_per_value_and_sums_their_roots(tmp_path
 @pytest.mark.parametrize("directory", PARENTS)
 def test_a_failing_call_routes_the_parent_to_report_failures(tmp_path: Path, directory: str) -> None:
     workspace = Workspace.initialize(tmp_path / "workspace")
-    marker, _payload = run_one(workspace, REPO_ROOT / directory, parameters={"values": _values(directory, [1, -1])})
+    marker, _payload = run_one(workspace, REPO_ROOT / directory, parameters={"values": [1, -1]})
     assert marker.kind == "failed"
     failure = workspace.read_state(marker)["failure"]
     assert failure["code"] == "examples.calls_failed"
@@ -142,7 +137,7 @@ def _collect_runs(tmp_path: Path, workspace: Workspace, *extra: str) -> list[Run
 def test_collecting_stores_one_linked_run_per_job(tmp_path: Path, directory: str) -> None:
     pytest.importorskip("httk.store")
     workspace = Workspace.initialize(tmp_path / "workspace")
-    marker, _payload = run_one(workspace, REPO_ROOT / directory, parameters={"values": _values(directory, [1, 4])})
+    marker, _payload = run_one(workspace, REPO_ROOT / directory, parameters={"values": [1, 4]})
     assert marker.kind == "succeeded", workspace.read_state(marker).get("failure")
 
     runs = _collect_runs(tmp_path, workspace)
@@ -164,7 +159,7 @@ def test_collecting_stores_one_linked_run_per_job(tmp_path: Path, directory: str
 def test_bare_runs_can_be_opted_out_of(tmp_path: Path, directory: str) -> None:
     pytest.importorskip("httk.store")
     workspace = Workspace.initialize(tmp_path / "workspace")
-    marker, _payload = run_one(workspace, REPO_ROOT / directory, parameters={"values": _values(directory, [1])})
+    marker, _payload = run_one(workspace, REPO_ROOT / directory, parameters={"values": [1]})
     assert marker.kind == "succeeded", workspace.read_state(marker).get("failure")
     # Neither workflow has a collector or declared outputs: nothing else to store.
     assert _collect_runs(tmp_path, workspace, "--no-bare-runs") == []

@@ -3,8 +3,10 @@
 
 What this example shows:
 
-* ``a.call(name, label=..., parameters=...)`` creates a child job of *another*
-  workflow, here ``examples.subworkflow-child``, once per value. Each child
+* ``a.call("child", label=..., parameters=...)`` creates a child job of
+  *another* workflow once per value. ``child`` is an alias this package
+  declares in its manifest's ``[workflow.calls]`` table, for
+  ``examples.subworkflow-child``. Each child
   runs that workflow's own runner with its own parameters, workdir and
   declaration, in parallel if the manager has room;
 * ``a.gather`` waits for all of them, and ``a.children`` lists them in the
@@ -19,17 +21,22 @@ failure handling that could equally be submitted on its own: use it to build
 on a workflow instead of copying its steps. Both kinds of child are gathered
 and read back the same way.
 
-Where the called name comes from: it is resolved when ``start`` runs, on the
-machine where the manager runs this step, exactly as ``httk job new
---workflow NAME`` would resolve it there, so the child workflow must be
-registered or installed on that machine (for example with ``httk plugin
-install`` of this repository, which installs every package in it). Instead of
-a name, the ``child_workflow`` parameter can be a git URI, pinned to a commit
-so every machine runs the same code::
+Why declare what is called: the dependency is then known before anything
+runs. ``httk job new`` refuses a job whose declared call does not resolve
+(and records the calls in its job.json); a manager does not claim the job
+until the called workflow is installed, and built if it is compiled, on its
+own machine (``httk job why`` and ``httk workflow precheck`` say what is
+missing); and at run time the job may call only what it declares, so a typo
+or a stray name in the code is refused rather than silently fetched. The name
+is resolved on the machine where the job runs, so install the child there
+(for example with ``httk plugin install`` of this repository, which installs
+every package in it). To call a workflow from a git repository, put its
+commit-pinned git URI in ``[workflow.calls]`` instead of a name, never in the
+code or a parameter::
 
-    git+https://github.com/httk/workflows-examples@<full commit>#subworkflow-child
+    child = "git+https://github.com/httk/workflows-examples@<full commit>#subworkflow-child"
 
-which is fetched and installed on first use (see ../compose). A called child
+The code keeps calling ``"child"``. A called child
 is created in this job's workspace, belongs to this job, and moves with it:
 transferring the parent to another workspace moves its children along, and a
 child cannot be transferred on its own.
@@ -59,15 +66,15 @@ run = Runner("examples.subworkflow")
 def start(a: Attempt) -> None:
     """Call the child workflow once per value, then wait for all the calls."""
 
-    # Both declared with defaults in httk_workflow.toml.
-    child_workflow = a.parameter("child_workflow")
+    # Declared with a default in httk_workflow.toml.
     values = a.parameter("values")
     for index, value in enumerate(values):
         # parameters= are the child job's parameters, checked against the child
         # workflow's own manifest (its declared types and defaults) right here:
         # a bad value raises in this step, before any child exists. The label
         # names the child in a.children and becomes its job tag.
-        a.call(child_workflow, label=f"value-{index}", parameters={"value": value})
+        # "child" is the alias from [workflow.calls], not a workflow name.
+        a.call("child", label=f"value-{index}", parameters={"value": value})
     # The calls are registered with this attempt's outcome and created when it
     # is published, by gather() below. State survives the wait.
     a.state["called"] = len(values)
@@ -86,7 +93,7 @@ def aggregate(a: Attempt) -> None:
         root = float((child.workdir / "root.txt").read_text(encoding="utf-8"))
         children[child.label] = {"job_key": child.job_key, "root": root}
     total = sum(child["root"] for child in children.values())
-    summary = {"child_workflow": a.parameter("child_workflow"), "children": children, "sum_of_roots": total}
+    summary = {"children": children, "sum_of_roots": total}
     (a.workdir / "summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     a.log.append("note", f"aggregated {len(children)} of {a.state['called']} calls: sum of roots {total}")
     a.succeed()

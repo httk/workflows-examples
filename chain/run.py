@@ -4,9 +4,11 @@
 What this example shows:
 
 * calls nest, and they cross languages. This workflow calls
-  ``examples.chain-rust`` by name; that compiled Rust workflow calls
-  ``examples.chain-leaf`` by name. A call names a *workflow*, and each child
-  runs its own workflow's runner, whatever it is written in;
+  ``examples.chain-rust``; that compiled Rust workflow calls
+  ``examples.chain-leaf``. Each package declares what it calls in its
+  manifest's ``[workflow.calls]`` table and calls it by alias (``"middle"``
+  here, ``"leaf"`` in the Rust runner). A call names a *workflow*, and each
+  child runs its own workflow's runner, whatever it is written in;
 * results travel up as files: the leaf writes ``trail.txt``, the Rust
   workflow reads it from its child's workdir and adds a line, and this step
   does the same, so the finished trail reads bottom to top::
@@ -15,11 +17,14 @@ What this example shows:
       examples.chain-rust (Rust)
       examples.chain (Python)
 
-* a compiled workflow must be *built* where it runs: before running this
-  chain, register the Rust binary in the workspace with
-  ``httk workflow build --workspace WORKSPACE ./chain-rust`` (managers never
-  build). All three names must resolve on the machine that runs the calling
-  steps, e.g. after ``httk plugin install`` of this repository.
+* declared dependencies are checked before anything runs. The Rust
+  workflow is compiled and must be *built* where it runs (managers never
+  build); until it is, a manager leaves a job of this workflow unclaimed, and
+  ``httk job why`` / ``httk workflow precheck`` name chain-rust as not built.
+  ``httk workflow build examples.chain`` builds it, because building a
+  workflow by name builds every workflow it declares it calls, transitively.
+  All three names must resolve on the machine where the jobs run, e.g. after
+  ``httk plugin install`` of this repository.
 
 The three jobs form one tree (the leaf is a child of the Rust job, which is a
 child of this job), stay in this job's workspace, and move together on
@@ -45,7 +50,9 @@ LINE = "examples.chain (Python)\n"
 def start(a: Attempt) -> None:
     """Call the Rust workflow and wait for it (and, through it, for the leaf)."""
 
-    a.call(a.parameter("middle_workflow"), label="middle")
+    # "middle" (the first argument) is the alias declared in [workflow.calls];
+    # the label happens to be the same word.
+    a.call("middle", label="middle")
     a.gather("finish", when="all_succeeded", on_impossible="middle_failed")
 
 

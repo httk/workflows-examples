@@ -4,14 +4,13 @@
 # A compiled package is published as *sources only*; each machine builds and
 # registers its own binary once, in the foreground, before jobs run:
 #
-#     httk workflow build --workspace WORKSPACE ./chain-rust
+#     httk workflow build --workspace WORKSPACE examples.chain-rust
 #
-# (for a plugin install, build the installed copy or a checkout of the same
-# sources: the registration is keyed by the source digest, not by location).
-# Managers never build: a job whose binary is not registered on the machine
-# that claims it fails with `runner_not_built`. That includes this workflow
-# when it is *called*: a caller naming examples.chain-rust needs it built in
-# the workspace where the call's child job will run.
+# by name (for an installed plugin) or by path (`./chain-rust`, for a
+# checkout). Managers never build. A workflow that declares this one in its
+# [workflow.calls] (../chain) is not even claimed until this binary is built
+# on the manager's machine, and `httk workflow build examples.chain` builds it
+# along with the caller.
 
 [workflow]
 name = "examples.chain-rust"
@@ -27,10 +26,10 @@ command = ["{artifacts}/chain"]
 steps = ["start", "finish", "leaf_failed"]
 initial_step = "start"
 
-[workflow.parameters.leaf_workflow]
-type = "string"
-default = "examples.chain-leaf"
-description = "The workflow this one calls: a registered or installed name, or a pinned git URI."
+# The workflow this one calls, by alias: main.rs calls "leaf". Declared calls
+# are known before anything runs (see ../subworkflow/httk_workflow.toml).
+[workflow.calls]
+leaf = "examples.chain-leaf"
 
 [workflow.build]
 # The Makefile copies the installed Rust SDK crate in and runs cargo offline.

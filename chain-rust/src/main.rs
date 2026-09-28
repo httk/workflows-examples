@@ -6,12 +6,15 @@
 //!   the installed *httk-workflow* by the Makefile). Every `Attempt` method runs
 //!   the same bridge the Python and Bash SDKs use, so a Rust step calls,
 //!   gathers and reads children exactly as they do;
-//! * `attempt.call(label, workflow, args)` calls another workflow *by name*,
-//!   here the Python workflow examples.chain-leaf. `args` are the options of
-//!   `httk_workflow_call` (`--parameter NAME=VALUE`, `--file NAME=PATH`, ...);
+//! * `attempt.call(label, workflow, args)` calls another workflow. Here
+//!   `workflow` is `leaf`, the alias httk_workflow.toml declares in
+//!   `[workflow.calls]` for the Python workflow examples.chain-leaf; the job
+//!   may call nothing else. `args` are the options of `httk_workflow_call`
+//!   (`--parameter NAME=VALUE`, `--file NAME=PATH`, ...);
 //! * `attempt.gather(...)` waits, and in the resumed step
 //!   `attempt.child(label, "workdir")` locates the child's workdir, so its
-//!   result is a plain file read;
+//!   result is a plain file read, and `?` propagates a failed read or write
+//!   (an `std::io::Error`) as an aborted attempt, like a bridge failure;
 //! * this workflow is itself called, by the Python workflow examples.chain.
 //!   Neither caller nor callee knows the other's language.
 //!
@@ -20,7 +23,8 @@
 //!     start --call examples.chain-leaf--> (child) --gather--> finish --> (succeeded)
 //!                                                     \-----> leaf_failed
 //!
-//! Build it with `httk workflow build` (see httk_workflow.toml); a bare
+//! Build it with `httk workflow build examples.chain-rust` (or build a
+//! workflow that calls it, see httk_workflow.toml); a bare
 //! `cargo build` lacks the SDK crate the Makefile stages under target/sdk.
 
 use std::fs;
@@ -32,11 +36,10 @@ use httk_workflow::{Attempt, Gather, Runner, StepError};
 const LINE: &str = "examples.chain-rust (Rust)\n";
 
 fn step_start(attempt: &Attempt) -> Result<(), StepError> {
-    // Declared with a default in httk_workflow.toml, so it is always set.
-    let leaf = attempt.parameter("leaf_workflow", None)?.unwrap_or_default();
-    // The name resolves on the machine where this step runs. `?` turns a
-    // refused call (e.g. an unknown workflow) into an aborted attempt.
-    attempt.call("leaf", &leaf, &[])?;
+    // Label "leaf", workflow "leaf": the second is the alias declared in
+    // [workflow.calls]. `?` turns a refused call (e.g. an undeclared workflow)
+    // into an aborted attempt.
+    attempt.call("leaf", "leaf", &[])?;
     attempt.gather(
         "finish",
         &Gather {
@@ -53,11 +56,12 @@ fn step_finish(attempt: &Attempt) -> Result<(), StepError> {
     let workdir = attempt
         .child("leaf", "workdir")?
         .ok_or_else(|| StepError::with_message(1, "the gathered leaf child has no workdir"))?;
-    let trail = fs::read_to_string(Path::new(&workdir).join("trail.txt"))
-        .map_err(|error| StepError::with_message(1, format!("cannot read the leaf's trail.txt: {error}")))?;
+    // `?` on an `std::io::Error` aborts the attempt with status 1 and a
+    // breadcrumb carrying the error's text ("I/O error: No such file or
+    // directory (os error 2)"); no `map_err` is needed.
+    let trail = fs::read_to_string(Path::new(&workdir).join("trail.txt"))?;
     // A step starts in its own workdir, so a relative path lands there.
-    fs::write("trail.txt", trail + LINE)
-        .map_err(|error| StepError::with_message(1, format!("cannot write trail.txt: {error}")))?;
+    fs::write("trail.txt", trail + LINE)?;
     attempt.succeed()?;
     Ok(())
 }
