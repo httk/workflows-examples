@@ -17,3 +17,8 @@ initial_step = "start"
 type = "array"
 default = [1, 2, 3]
 description = "The numbers to square, one child job each."
+
+[workflow.parameters.scale]
+type = "number"
+default = 1
+description = "Every square is multiplied by this; the children read it from the parent's workdir."

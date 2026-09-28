@@ -10,7 +10,10 @@ What this example shows:
 * ``a.gather(step, when=..., on_impossible=...)`` makes the parent wait: the
   manager resumes it at ``step`` once the children are done;
 * in the gathering step, ``a.children`` lists the children with their
-  outcome and their directories, so reading their results is a file read.
+  outcome and their directories, so reading their results is a file read;
+* the other direction: a child finds the job that spawned it through
+  ``a.parent`` and reads a file the parent wrote *in place*, from the parent's
+  workdir, instead of receiving its own copy.
 
 The flow is::
 
@@ -37,6 +40,12 @@ def start(a: Attempt) -> None:
 
     # Declared in httk_workflow.toml with a default, so it is always in job.json.
     values = a.parameter("values")
+    # A file every child reads in place (see `square`). A child may start the
+    # moment this step's outcome is published, so write shared files before
+    # that, and leave them alone until every child reading them has ended.
+    # (Here `report_failures` can run while siblings still do; it leaves
+    # common.json alone.)
+    (a.workdir / "common.json").write_text(json.dumps({"scale": a.parameter("scale")}), encoding="utf-8")
     for index, value in enumerate(values):
         # A ChildSpec needs only the step the child starts at and its own
         # parameters; the runner, workflow, and scheduling follow the parent.
@@ -56,13 +65,26 @@ def start(a: Attempt) -> None:
 
 @run.step
 def square(a: Attempt) -> None:
-    """The child's work: square one number and write it to result.json."""
+    """The child's work: square one number, scale it, and write result.json."""
 
     value = a.parameter("value")
     if not isinstance(value, (int, float)):
         a.fail("examples.not_a_number", f"cannot square {value!r}")
         return
-    (a.workdir / "result.json").write_text(json.dumps({"value": value, "square": value * value}), encoding="utf-8")
+    # a.parent locates the spawning job in this workspace (None for a root job).
+    # Reading its workdir in place avoids one copy per child. For a tiny file
+    # like this one, copying it in at spawn time (or passing a parameter) is the
+    # better habit: the child is then self-contained. Reading in place pays off
+    # for large shared files, such as a WAVECAR every child starts from.
+    parent = a.parent
+    if parent is None or parent.workdir is None:
+        # No reachable parent (e.g. this step was submitted as a root job), or a
+        # parent with isolated workdirs, which a child cannot name.
+        a.fail("examples.no_parent_workdir", "square must run as a child of a persistent-workdir parent")
+        return
+    common = json.loads((parent.workdir / "common.json").read_text(encoding="utf-8"))
+    square = value * value * common["scale"]
+    (a.workdir / "result.json").write_text(json.dumps({"value": value, "square": square}), encoding="utf-8")
     a.succeed()
 
 

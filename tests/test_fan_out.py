@@ -30,6 +30,16 @@ def test_fan_out_spawns_one_child_per_value_and_sums_their_squares(tmp_path: Pat
     }
 
 
+def test_children_read_the_parents_workdir_in_place(tmp_path: Path) -> None:
+    workspace = Workspace.initialize(tmp_path / "workspace")
+    marker, payload = run_one(workspace, REPO_ROOT / "fan-out", parameters={"values": [2, 3], "scale": 10})
+    assert marker.kind == "succeeded"
+    # The parent wrote common.json once; each child read it through a.parent.
+    assert json.loads((payload / "run" / "common.json").read_text(encoding="utf-8")) == {"scale": 10}
+    summary = json.loads((payload / "run" / "summary.json").read_text(encoding="utf-8"))
+    assert summary["sum_of_squares"] == 40 + 90
+
+
 def test_a_failing_child_routes_the_parent_to_report_failures(tmp_path: Path) -> None:
     workspace = Workspace.initialize(tmp_path / "workspace")
     marker, _payload = run_one(workspace, REPO_ROOT / "fan-out", parameters={"values": [1, "two"]})
