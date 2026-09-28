@@ -1,3 +1,7 @@
 __pycache__/
 .pytest_cache/
 .ruff_cache/
+# Build output of the compiled chain-rust package (make / httk workflow build in place).
+/chain-rust/chain
+/chain-rust/target/
+/chain-rust/Cargo.lock

@@ -1,0 +1,35 @@
+# A parent workflow that calls another workflow, examples.subworkflow-child,
+# once per value, waits for all the calls, and adds up their results. See the
+# comments in `run.py`.
+#
+# Two packages, two declarations: this manifest declares what the *parent*
+# workflow is, and ../subworkflow-child/httk_workflow.toml declares what the
+# child is. Every job carries the declaration of its own workflow in its
+# job.json, so a collected parent and each collected child describe
+# themselves, and the children are not folded into the parent's description.
+
+[workflow]
+name = "examples.subworkflow"
+description = "call another workflow once per value, gather the calls, and add up their results"
+declaration_uri = "https://example.org/httk/workflows-examples/declarations/subworkflow"
+declaration_file = "declaration.json"
+# The child's requirements are checked when its own job is created and
+# claimed; the parent only needs what its own runner uses.
+requires = ["httk-workflow>=2.1.1"]
+
+[workflow.runner]
+entry = "run.py"
+# Only the parent's own steps: the children run the child workflow's runner,
+# not this one (compare ../fan-out, whose children run steps listed here).
+steps = ["start", "aggregate", "report_failures"]
+initial_step = "start"
+
+[workflow.parameters.values]
+type = "array"
+default = [1, 4, 9]
+description = "One call of the child workflow per value."
+
+[workflow.parameters.child_workflow]
+type = "string"
+default = "examples.subworkflow-child"
+description = "The workflow to call: a registered or installed name, or a pinned git URI."

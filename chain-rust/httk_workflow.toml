@@ -1,0 +1,42 @@
+# The middle of the three-language chain, a compiled Rust workflow. It is called
+# by examples.chain (Python) and itself calls examples.chain-leaf (Python).
+#
+# A compiled package is published as *sources only*; each machine builds and
+# registers its own binary once, in the foreground, before jobs run:
+#
+#     httk workflow build --workspace WORKSPACE ./chain-rust
+#
+# (for a plugin install, build the installed copy or a checkout of the same
+# sources: the registration is keyed by the source digest, not by location).
+# Managers never build: a job whose binary is not registered on the machine
+# that claims it fails with `runner_not_built`. That includes this workflow
+# when it is *called*: a caller naming examples.chain-rust needs it built in
+# the workspace where the call's child job will run.
+
+[workflow]
+name = "examples.chain-rust"
+description = "call examples.chain-leaf and extend its trail, in Rust: the middle of the chain"
+declaration_uri = "https://example.org/httk/workflows-examples/declarations/chain-rust"
+declaration_file = "declaration.json"
+requires = ["httk-workflow>=2.1.1"]
+
+[workflow.runner]
+# No `entry`: the runner is the compiled binary. `{artifacts}` is the
+# directory of this machine's registered build of this package.
+command = ["{artifacts}/chain"]
+steps = ["start", "finish", "leaf_failed"]
+initial_step = "start"
+
+[workflow.parameters.leaf_workflow]
+type = "string"
+default = "examples.chain-leaf"
+description = "The workflow this one calls: a registered or installed name, or a pinned git URI."
+
+[workflow.build]
+# The Makefile copies the installed Rust SDK crate in and runs cargo offline.
+command = "make"
+# One registration per machine class: a binary is not portable across them.
+platform = "uname -sm"
+# What the build produces. Artifacts are stripped before publication, so they
+# never enter the source digest or a transfer.
+artifacts = ["chain", "target", "Cargo.lock"]

@@ -1,0 +1,14 @@
+[package]
+name = "examples_chain_rust"
+version = "0.0.0"
+edition = "2021"
+# A workflow package runner, never published; the compiled binary is the runner.
+publish = false
+
+[[bin]]
+name = "chain"
+path = "src/main.rs"
+
+[dependencies]
+# The Makefile copies the installed SDK crate here; see its comment.
+httk_workflow = { path = "target/sdk" }

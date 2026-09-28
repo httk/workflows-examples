@@ -1,0 +1,14 @@
+{
+  "$id": "https://example.org/httk/workflows-examples/declarations/chain-leaf",
+  "title": "Bottom of the three-language call chain (teaching example)",
+  "description": "This workflow declaration belongs to the httk workflows-examples teaching repository: it starts the trail file the chain examples pass up to their callers.\nIt consumes no declared inputs and produces no declared outputs; its result is a file in the job's workdir.",
+  "x-httk-definition": {
+    "kind": "workflow_declaration",
+    "format": "0.1",
+    "version": "0.1.0",
+    "name": "examples-chain-leaf",
+    "label": "examples_chain_leaf_workflow_httk"
+  },
+  "inputs": [],
+  "outputs": []
+}

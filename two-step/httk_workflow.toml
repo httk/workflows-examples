@@ -1,0 +1,32 @@
+# The most basic multi-step workflow: step `count` writes a file and advances
+# to step `report`, which reads it back and succeeds. Compared with ../hello,
+# the new pieces are `initial_step`, a declared parameter, and a declaration.
+# See the comments in `run.py`.
+
+[workflow]
+name = "examples.two-step"
+description = "count the words of a text in one step, report on them in the next"
+# This package carries its own workflow declaration: a small JSON document
+# saying *what* the workflow is, whose `$id` is declaration_uri. It is copied into every job's
+# job.json, so a finished job can later be explained (and collected into a
+# provenance record) without the package at hand. This workflow consumes no
+# declared inputs and produces no declared outputs, so the document mostly
+# describes it in words; ../vasp-relax-annotated/declaration.json shows one
+# with roles.
+declaration_uri = "https://example.org/httk/workflows-examples/declarations/two-step"
+declaration_file = "declaration.json"
+requires = ["httk-workflow>=2.1.1"]
+
+[workflow.runner]
+entry = "run.py"
+# With more than one step the manifest must say which one a new job starts at.
+steps = ["count", "report"]
+initial_step = "count"
+# The default workdir mode is "persistent": one directory (<payload>/run) that
+# every step of the job starts in, so a file one step writes is still there for
+# the next. That is what lets `report` read words.txt.
+
+[workflow.parameters.text]
+type = "string"
+default = "the quick brown fox jumps over the lazy dog"
+description = "The text whose words are counted."

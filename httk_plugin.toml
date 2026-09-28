@@ -1,4 +1,4 @@
 [plugin]
 name = "workflows-examples"
 description = "Teaching examples of httk workflow packages (not production workflows)"
-workflows = ["hello", "hello-bash", "vasp-relax-annotated", "vasp-relax-bash-annotated", "fan-out", "compose"]
+workflows = ["hello", "hello-bash", "vasp-relax-annotated", "vasp-relax-bash-annotated", "fan-out", "compose", "two-step", "two-step-bash", "subworkflow", "subworkflow-bash", "subworkflow-child", "chain", "chain-rust", "chain-leaf"]

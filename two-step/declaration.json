@@ -1,0 +1,14 @@
+{
+  "$id": "https://example.org/httk/workflows-examples/declarations/two-step",
+  "title": "Two-step word count (teaching example)",
+  "description": "This workflow declaration belongs to the httk workflows-examples teaching repository: it counts the words of a text in one step and reports on them in the next.\nIt consumes no declared inputs and produces no declared outputs; its result is a report file in the job's workdir.",
+  "x-httk-definition": {
+    "kind": "workflow_declaration",
+    "format": "0.1",
+    "version": "0.1.0",
+    "name": "examples-two-step",
+    "label": "examples_two_step_workflow_httk"
+  },
+  "inputs": [],
+  "outputs": []
+}

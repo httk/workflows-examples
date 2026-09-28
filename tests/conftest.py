@@ -10,6 +10,7 @@ does: :func:`httk.workflow.scaffold.new_job` on a package directory (what
 import json
 import logging
 import os
+import shutil
 import sys
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -29,7 +30,25 @@ for _thread_limit in ("OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREAD
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MOCK_VASP = Path(__file__).resolve().parent / "mock_vasp.py"
-PACKAGES = ("hello", "hello-bash", "vasp-relax-annotated", "vasp-relax-bash-annotated", "fan-out", "compose")
+PACKAGES = (
+    "hello",
+    "hello-bash",
+    "two-step",
+    "two-step-bash",
+    "vasp-relax-annotated",
+    "vasp-relax-bash-annotated",
+    "fan-out",
+    "compose",
+    "subworkflow",
+    "subworkflow-bash",
+    "subworkflow-child",
+    "chain",
+    "chain-rust",
+    "chain-leaf",
+)
+# Packages whose runner is a compiled binary built by `httk workflow build`,
+# with the executables their build needs.
+COMPILED = {"chain-rust": ("cargo", "make")}
 
 SILICON = """silicon
 1.0
@@ -131,3 +150,38 @@ def job_parameters(payload: Path) -> dict[str, Any]:
     """The parameters recorded in the job's ``job.json``."""
 
     return json.loads((payload / "job.json").read_text(encoding="utf-8"))["parameters"]
+
+
+@pytest.fixture
+def installed_examples(tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
+    """Install this working tree as the ``workflows-examples`` plugin in the isolated data home.
+
+    That is what ``httk plugin install`` of this repository does, and it makes
+    every package's workflow name resolve on this machine, including inside the
+    runner processes a manager starts (they inherit ``HTTK_DATA_HOME``). Only
+    the packages and the plugin manifest are copied, not tests or caches.
+    This test process caches plugin discovery, so the cache is cleared around
+    the test (with the helper httk-workflow provides for tests).
+    """
+
+    from httk.core.plugins import install_plugin
+    from httk.workflow.packages import _reset_plugin_workflow_cache
+
+    source = tmp_path_factory.mktemp("plugin-source") / "workflows-examples"
+    source.mkdir()
+    for directory in PACKAGES:
+        ignore = shutil.ignore_patterns("__pycache__", "target", "Cargo.lock")
+        shutil.copytree(REPO_ROOT / directory, source / directory, ignore=ignore)
+    shutil.copy2(REPO_ROOT / "httk_plugin.toml", source)
+    install_plugin(source)
+    _reset_plugin_workflow_cache()
+    yield
+    _reset_plugin_workflow_cache()
+
+
+def require_toolchain(directory: str) -> None:
+    """Skip the calling test when the compiled package *directory* cannot be built here."""
+
+    missing = [tool for tool in COMPILED[directory] if shutil.which(tool) is None]
+    if missing:
+        pytest.skip(f"{directory} needs {', '.join(missing)}")

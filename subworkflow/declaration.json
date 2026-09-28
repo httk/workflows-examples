@@ -1,0 +1,14 @@
+{
+  "$id": "https://example.org/httk/workflows-examples/declarations/subworkflow",
+  "title": "Sum of square roots by sub-workflows (teaching example)",
+  "description": "This workflow declaration belongs to the httk workflows-examples teaching repository: it calls the subworkflow-child workflow once per value and adds up the square roots the calls produce.\nIt consumes no declared inputs and produces no declared outputs; its result is a summary file in the job's workdir. Each called child job carries the child workflow's own declaration.",
+  "x-httk-definition": {
+    "kind": "workflow_declaration",
+    "format": "0.1",
+    "version": "0.1.0",
+    "name": "examples-subworkflow",
+    "label": "examples_subworkflow_workflow_httk"
+  },
+  "inputs": [],
+  "outputs": []
+}

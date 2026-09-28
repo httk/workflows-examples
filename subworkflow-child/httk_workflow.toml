@@ -1,0 +1,29 @@
+# The workflow ../subworkflow and ../subworkflow-bash call, several times, by
+# its name. Nothing in it knows it is called: it is an ordinary one-step
+# workflow that a person could just as well submit with `httk job new`.
+
+[workflow]
+# The name the callers use: `a.call("examples.subworkflow-child", ...)`. It
+# resolves on the machine where the calling step runs, because this package is
+# registered or installed there (e.g. with `httk plugin install` of this
+# repository).
+name = "examples.subworkflow-child"
+description = "write the square root of one non-negative number to root.txt"
+# The child has its own declaration, independent of its callers': a job of
+# this workflow says what *it* is, whether a person or another workflow
+# created it.
+declaration_uri = "https://example.org/httk/workflows-examples/declarations/subworkflow-child"
+declaration_file = "declaration.json"
+requires = ["httk-workflow>=2.1.1"]
+
+[workflow.runner]
+entry = "run.py"
+steps = ["root"]
+
+[workflow.parameters.value]
+# Declared parameters are checked the same way whether a person submits the
+# job or a caller's `a.call(..., parameters=...)` creates it: a caller passing a
+# string here is refused inside the calling step, before any child exists.
+type = "number"
+default = 1
+description = "The number whose square root is written to root.txt; negative values fail the job."

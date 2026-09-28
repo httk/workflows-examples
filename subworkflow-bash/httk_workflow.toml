@@ -1,0 +1,32 @@
+# The same parent workflow as ../subworkflow, with a Bash runner. It calls the
+# same child workflow, examples.subworkflow-child, which is written in Python:
+# a caller and the workflow it calls need not share a language, because a call
+# names a workflow, not code.
+#
+# As in ../subworkflow, this package declares only the parent; each child job
+# carries ../subworkflow-child's declaration.
+
+[workflow]
+name = "examples.subworkflow-bash"
+description = "call another workflow once per value, gather the calls, and add up their results, in Bash"
+declaration_uri = "https://example.org/httk/workflows-examples/declarations/subworkflow-bash"
+declaration_file = "declaration.json"
+requires = ["httk-workflow>=2.1.1"]
+
+[workflow.runner]
+entry = "run.sh"
+steps = ["start", "aggregate", "report_failures"]
+initial_step = "start"
+
+[workflow.parameters.values]
+# A string of space-separated numbers rather than an array: a JSON array needs
+# a JSON parser to take apart, which plain Bash does not have. A string splits
+# with `read -ra`.
+type = "string"
+default = "1 4 9"
+description = "Space-separated numbers; one call of the child workflow per value."
+
+[workflow.parameters.child_workflow]
+type = "string"
+default = "examples.subworkflow-child"
+description = "The workflow to call: a registered or installed name, or a pinned git URI."

@@ -1,0 +1,14 @@
+{
+  "$id": "https://example.org/httk/workflows-examples/declarations/subworkflow-child",
+  "title": "Square root of one number (teaching example)",
+  "description": "This workflow declaration belongs to the httk workflows-examples teaching repository: it computes the square root of one non-negative number, and is the workflow the subworkflow examples call.\nIt consumes no declared inputs and produces no declared outputs; its result is a file in the job's workdir.",
+  "x-httk-definition": {
+    "kind": "workflow_declaration",
+    "format": "0.1",
+    "version": "0.1.0",
+    "name": "examples-subworkflow-child",
+    "label": "examples_subworkflow_child_workflow_httk"
+  },
+  "inputs": [],
+  "outputs": []
+}

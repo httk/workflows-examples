@@ -9,7 +9,7 @@ test-extended:
 # ruff reaches the suffix-less executable instantiate hook through
 # extend-include in pyproject.toml; the Bash runners and scripts are
 # syntax-checked here.
-BASH_EXECUTABLES = hello-bash/run.sh vasp-relax-bash-annotated/run.sh vasp-relax-bash-annotated/scripts/summary.sh
+BASH_EXECUTABLES = hello-bash/run.sh two-step-bash/run.sh subworkflow-bash/run.sh vasp-relax-bash-annotated/run.sh vasp-relax-bash-annotated/scripts/summary.sh
 
 lint:
 	python3 -m ruff format --check .

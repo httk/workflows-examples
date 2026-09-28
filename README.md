@@ -20,10 +20,18 @@ Read them in this order. Each one adds a few ideas to the one before.
 | --- | --- | --- |
 | [`hello`](hello) | `examples.hello` | The smallest workflow: a minimal manifest and a one-step Python runner that reads a parameter, writes a file, and succeeds. |
 | [`hello-bash`](hello-bash) | `examples.hello-bash` | The same in Bash: sourcing the Bash runner API, `step_` functions, outcome functions that return. |
+| [`two-step`](two-step) | `examples.two-step` | The most basic multi-step workflow: `initial_step`, `advance` to a second step, and the two ways to hand something on: a file in the persistent workdir and a value in job state (`a.state`). Carries its own workflow declaration. |
+| [`two-step-bash`](two-step-bash) | `examples.two-step-bash` | The same in Bash: `httk_workflow_advance --state`, `httk_workflow_state_get`. |
 | [`vasp-relax-annotated`](vasp-relax-annotated) | `examples.vasp-relax-annotated` | The centerpiece. A VASP relaxation with every hook real: an `instantiate.py` that reads, validates and stages the input structure, derives a tag and a parameter (telling a caller-supplied value from a declared default); a three-step runner on `httk.workflow.codes.vasp` with a short remedy loop; a `collect.py` that reads the energy and relaxed structure itself; a postprocess script; an external declaration; declared parameters. |
 | [`vasp-relax-bash-annotated`](vasp-relax-bash-annotated) | `examples.vasp-relax-bash-annotated` | The same declared workflow with a Bash runner on the Bash VASP API and an *executable* instantiate hook speaking the JSON stdin/stdout contract. |
 | [`fan-out`](fan-out) | `examples.fan-out` | One job spawns one child job per value (`ChildSpec` + `spawn`), gathers them, and aggregates their results; the children read a file from the parent's workdir in place through `a.parent`; a failing child routes the parent to a triage step. |
 | [`compose`](compose) | `examples.compose` | A workflow that calls another workflow (`hello`, by git URI) with `Attempt.call`, waits for it, and builds on its result. Its default URI needs network access and the pushed repository (see below). |
+| [`subworkflow-child`](subworkflow-child) | `examples.subworkflow-child` | A one-step workflow that writes the square root of a number to `root.txt`: the workflow the two subworkflow examples call. Nothing in it knows it is called. |
+| [`subworkflow`](subworkflow) | `examples.subworkflow` | A parent that calls `examples.subworkflow-child` *by name* once per value (`Attempt.call`), gathers the calls, and adds up their results through `a.children`; `spawn` versus `call`, where a called name is resolved, pinned git URIs, children moving with their parent, and one declaration per workflow; `httk workflow collect --into` then stores one run per job, each naming its own declaration, with the parent's run linked to its children's runs. Needs the child installed (see below). |
+| [`subworkflow-bash`](subworkflow-bash) | `examples.subworkflow-bash` | The same parent in Bash (`httk_workflow_call`, `httk_workflow_children`), calling the same Python child: a call names a workflow, not a language. |
+| [`chain-leaf`](chain-leaf) | `examples.chain-leaf` | The bottom of a three-language chain: a one-step Python workflow that starts `trail.txt`. |
+| [`chain-rust`](chain-rust) | `examples.chain-rust` | The middle, a compiled Rust workflow on the native Rust SDK: `Attempt::call` of `examples.chain-leaf` by name, `gather`, reading the child's workdir; `[workflow.build]`, `command = ["{artifacts}/chain"]`, and a Makefile that stages the installed SDK crate. Needs `cargo` and `make`, and a one-time `httk workflow build`. |
+| [`chain`](chain) | `examples.chain` | The top: a Python workflow calls the Rust one by name, which calls the Python leaf; the trail comes back up with one line per level. Calls nest and cross languages. |
 
 ## Running an example
 
@@ -87,8 +95,26 @@ httk job new --workflow-dir ./compose \
 httk plugin install 'git+https://github.com/httk/workflows-examples'
 ```
 
-installs all six packages listed in `httk_plugin.toml` at once; their
-workflow names then resolve directly.
+installs all fourteen packages listed in `httk_plugin.toml` at once; their
+workflow names then resolve directly. The subworkflow examples rely on that:
+they call `examples.subworkflow-child` by name, and the name is resolved on the
+machine where the calling step runs, so install the plugin (or the child
+package) there before running them:
+
+```console
+httk plugin install 'git+https://github.com/httk/workflows-examples'
+httk job new --workflow examples.subworkflow --parameter 'values=[1, 4, 9]'
+httk workflow run
+```
+
+The chain examples also need the Rust middle built once per workspace and
+machine (managers never build), from a checkout of the same sources:
+
+```console
+httk workflow build ./chain-rust
+httk job new --workflow examples.chain
+httk workflow run
+```
 
 ## Anatomy of a package
 
@@ -99,11 +125,12 @@ metadata):
 | Manifest table | File | When it runs | Example |
 | --- | --- | --- | --- |
 | `[workflow]` (`name`, `description`, `requires`) | — | `requires` is checked at submission and at claim | all |
-| `[workflow] declaration_uri`, `declaration_file` | `declaration.json` | carried into every job | `vasp-relax-annotated` |
+| `[workflow] declaration_uri`, `declaration_file` | `declaration.json` | carried into every job | `vasp-relax-annotated`, `two-step`, `subworkflow`, `subworkflow-child` |
 | `[workflow.runner]` (`entry`, `steps`, `initial_step`, `data_mode`) | the `entry` member, here `run.py` or `run.sh` (any executable; `run` when `entry` is omitted) | once per attempt, by a manager | all |
 | `[workflow.inputs.NAME]` | — (staged to `destination`, or consumed by the instantiate hook) | at submission | `vasp-relax-annotated` |
-| `[workflow.parameters.NAME]` | — (read by hooks and runner) | type-checked at submission; defaults applied after the instantiate hook | `vasp-relax-annotated`, `fan-out`, `compose` |
+| `[workflow.parameters.NAME]` | — (read by hooks and runner) | type-checked at submission; defaults applied after the instantiate hook | `vasp-relax-annotated`, `two-step`, `fan-out`, `subworkflow` |
 | `[workflow.outputs.NAME]` | — (produced by the collect hook) | at collection | `vasp-relax-annotated` |
+| `[workflow.build]` (`command`, `platform`, `artifacts`) | `Makefile`, `Cargo.toml`, `src/main.rs` | once per machine, by `httk workflow build`; the runner is then `command = ["{artifacts}/chain"]` | `chain-rust` |
 | `[workflow.instantiate] file` | `instantiate.py` (in-process) or `instantiate` (executable, JSON; any name without `.py`) | at submission, on the submitting machine, after the required-input check | both VASP examples |
 | `[workflow.collect] file` | `collect.py` (in-process) or an executable (JSON lines) | at `httk workflow collect` | both VASP examples |
 | `[workflow.postprocess.NAME]` | any executable (`scripts/summary.py`, `scripts/summary.sh`) | on request, after collection | both VASP examples |
@@ -125,7 +152,9 @@ A few distinctions the examples keep coming back to:
   declaration document, which says *what* the workflow is (inputs and outputs
   in OPTIMADE vocabulary). The git URI a job is created from names the
   *definition*, the code that ran. Both VASP examples are two definitions of
-  one declaration, so they share its `$id`. The examples use an `example.org`
+  one declaration, so they share its `$id`. The two-step and subworkflow
+  packages each declare their own `$id`, and a called child job carries the
+  declaration of the workflow it runs, not its caller's. The examples use an `example.org`
   `$id` because they are not a published declaration; a real workflow uses a
   URI its authors control.
 - **Collect vs postprocess.** The collect hook turns a finished job into httk
@@ -155,3 +184,8 @@ which computes nothing: it writes plausible OUTCAR, OSZICAR and CONTCAR files
 a diagnosable error so the remedy loop runs. The `compose` test commits a
 snapshot of this working tree into a temporary git repository and calls
 `hello` through its `git+file://` URI, so it works before anything is pushed.
+The subworkflow tests install this working tree as a plugin into the test's
+isolated data home first, so the child resolves by name, offline, and then
+collect the tree into a SQLite store to check its linked runs.
+The chain test builds and registers `chain-rust` with `httk workflow build`
+and is skipped when `cargo` or `make` is not on `PATH`.

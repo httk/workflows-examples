@@ -1,0 +1,22 @@
+# The same two-step workflow as ../two-step, with a Bash runner. The runner is
+# the only file that differs in substance: parameters, steps and the
+# declaration are declared the same way whatever language the entry is in.
+
+[workflow]
+name = "examples.two-step-bash"
+description = "count the words of a text in one step, report on them in the next, in Bash"
+# Each package here has its own declaration document (see declaration.json);
+# ../two-step/httk_workflow.toml explains what it is for.
+declaration_uri = "https://example.org/httk/workflows-examples/declarations/two-step-bash"
+declaration_file = "declaration.json"
+requires = ["httk-workflow>=2.1.1"]
+
+[workflow.runner]
+entry = "run.sh"
+steps = ["count", "report"]
+initial_step = "count"
+
+[workflow.parameters.text]
+type = "string"
+default = "the quick brown fox jumps over the lazy dog"
+description = "The text whose words are counted."

@@ -1,0 +1,14 @@
+{
+  "$id": "https://example.org/httk/workflows-examples/declarations/chain",
+  "title": "Three-language call chain (teaching example)",
+  "description": "This workflow declaration belongs to the httk workflows-examples teaching repository: it calls the chain-rust workflow, which calls the chain-leaf workflow, and finishes the trail file they pass up.\nIt consumes no declared inputs and produces no declared outputs; its result is a file in the job's workdir.",
+  "x-httk-definition": {
+    "kind": "workflow_declaration",
+    "format": "0.1",
+    "version": "0.1.0",
+    "name": "examples-chain",
+    "label": "examples_chain_workflow_httk"
+  },
+  "inputs": [],
+  "outputs": []
+}

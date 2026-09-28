@@ -1,0 +1,14 @@
+{
+  "$id": "https://example.org/httk/workflows-examples/declarations/chain-rust",
+  "title": "Middle of the three-language call chain, in Rust (teaching example)",
+  "description": "This workflow declaration belongs to the httk workflows-examples teaching repository: it calls the chain-leaf workflow from a compiled Rust runner and extends the trail file the leaf wrote.\nIt consumes no declared inputs and produces no declared outputs; its result is a file in the job's workdir.",
+  "x-httk-definition": {
+    "kind": "workflow_declaration",
+    "format": "0.1",
+    "version": "0.1.0",
+    "name": "examples-chain-rust",
+    "label": "examples_chain_rust_workflow_httk"
+  },
+  "inputs": [],
+  "outputs": []
+}
