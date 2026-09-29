@@ -13,7 +13,7 @@ What this example shows:
   runner reads it without a fallback of its own) and *settings*
   (``a.setting``: facts about the machine the job happens to run on, such as
   the VASP command, looked up when the step runs);
-* the ``httk.workflow.codes.vasp`` primitives: prepare the inputs, run VASP under
+* the ``httk.codes.vasp`` primitives: prepare the inputs, run VASP under
   supervision, and plan and apply a remedy when VASP fails in a known way.
 
 The flow is::
@@ -35,8 +35,7 @@ state, and the job definition.
 import shlex
 import shutil
 
-from httk.workflow import Attempt, Runner
-from httk.workflow.codes.vasp import (
+from httk.codes.vasp import (
     VaspPreparationOptions,
     apply_vasp_remedy,
     clean_vasp_outputs,
@@ -47,6 +46,7 @@ from httk.workflow.codes.vasp import (
     run_vasp,
     validate_vasp_workdir,
 )
+from httk.workflow import Attempt, Runner
 
 # The name must equal `[workflow] name` in httk_workflow.toml, and the steps
 # registered below must equal its `[workflow.runner] steps`.

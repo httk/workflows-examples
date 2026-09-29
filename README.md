@@ -9,8 +9,10 @@ ladder, POTCAR provenance, transactional publishing, postprocess plots), or
 copy one of these packages and grow it.
 
 All examples need an installed *httk-workflow*; the two VASP examples also
-need *httk-atomistic*, for reading and writing structures. None of them needs
-VASP to try out: `tests/mock_vasp.py` stands in for it (see below).
+need *httk-atomistic*, for reading and writing structures, and
+*httk-workflow-vasp*, for the `httk.codes.vasp` helpers (`pip install
+httk-workflow-vasp`). None of them needs VASP to try out: `tests/mock_vasp.py`
+stands in for it (see below).
 
 ## Learning path
 
@@ -22,7 +24,7 @@ Read them in this order. Each one adds a few ideas to the one before.
 | [`hello-bash`](hello-bash) | `examples.hello-bash` | The same in Bash: sourcing the Bash runner API, `step_` functions, outcome functions that return. |
 | [`two-step`](two-step) | `examples.two-step` | The most basic multi-step workflow: `initial_step`, `advance` to a second step, and the two ways to hand something on: a file in the persistent workdir and a value in job state (`a.state`). Carries its own workflow declaration. |
 | [`two-step-bash`](two-step-bash) | `examples.two-step-bash` | The same in Bash: `httk_workflow_advance --state`, `httk_workflow_state_get`. |
-| [`vasp-relax-annotated`](vasp-relax-annotated) | `examples.vasp-relax-annotated` | The centerpiece. A VASP relaxation with every hook real: an `instantiate.py` that reads, validates and stages the input structure, derives a tag and a parameter (telling a caller-supplied value from a declared default); a three-step runner on `httk.workflow.codes.vasp` with a short remedy loop; a `collect.py` that reads the energy and relaxed structure itself; a postprocess script; an external declaration; declared parameters. |
+| [`vasp-relax-annotated`](vasp-relax-annotated) | `examples.vasp-relax-annotated` | The centerpiece. A VASP relaxation with every hook real: an `instantiate.py` that reads, validates and stages the input structure, derives a tag and a parameter (telling a caller-supplied value from a declared default); a three-step runner on `httk.codes.vasp` with a short remedy loop; a `collect.py` that reads the energy and relaxed structure itself; a postprocess script; an external declaration; declared parameters. |
 | [`vasp-relax-bash-annotated`](vasp-relax-bash-annotated) | `examples.vasp-relax-bash-annotated` | The same declared workflow with a Bash runner on the Bash VASP API and an *executable* instantiate hook speaking the JSON stdin/stdout contract. |
 | [`fan-out`](fan-out) | `examples.fan-out` | One job spawns one child job per value (`ChildSpec` + `spawn`), gathers them, and aggregates their results; the children read a file from the parent's workdir in place through `a.parent`; a failing child routes the parent to a triage step. |
 | [`compose`](compose) | `examples.compose` | A workflow that calls another workflow (`hello`, by git URI) with `Attempt.call`, waits for it, and builds on its result. Its default URI needs network access and the pushed repository (see below). |
