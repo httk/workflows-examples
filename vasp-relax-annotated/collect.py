@@ -13,9 +13,9 @@ What this example shows:
   output into the collected provenance ``Run`` and adds the ``product_of``
   edges the manifest declares, so the hook only has to produce values.
 
-The production workflows delegate to ``httk.codes.vasp.collect``; this
-hook does the reading itself with the httk file readers, to show that there
-is nothing more to it.
+The production workflows read their files with the short helpers of
+``httk.codes.vasp.collect``; this hook does the reading itself with the httk
+file readers, to show that there is nothing more to it.
 """
 
 import httk.core
