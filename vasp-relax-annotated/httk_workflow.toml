@@ -114,7 +114,7 @@ product_of = "relaxed_structure"
 [workflow.instantiate]
 file = "instantiate.py"
 
-# A .py hook runs in-process when the job is collected (`httk workflow collect`).
+# A .py hook runs in-process when the job is collected (`httk collect`).
 [workflow.collect]
 file = "collect.py"
 

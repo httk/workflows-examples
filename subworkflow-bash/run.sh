@@ -34,7 +34,7 @@
 # Called children live in this job's workspace, belong to this job, and move
 # with it when it is transferred; a child cannot be transferred on its own.
 #
-# Provenance: `httk workflow collect --into results.sqlite --id-base BASE`
+# Provenance: `httk collect --into results.sqlite --id-base BASE`
 # stores one run per job even though neither workflow collects anything else;
 # each run names its own workflow's declaration, and the parent's run links to
 # every child's run by call label. `--no-bare-runs` leaves such runs out.

@@ -42,7 +42,7 @@ transferring the parent to another workspace moves its children along, and a
 child cannot be transferred on its own.
 
 Provenance: neither workflow has a collector or declared outputs, but
-``httk workflow collect --into results.sqlite --id-base my.campaign`` still
+``httk collect --into results.sqlite --id-base my.campaign`` still
 stores one run (an ``_httk_runs`` entry) per job: the parent's run names this
 package's declaration, each child's run names the child's declaration, and the
 parent's run links to each child's run by the call's label (``value-0``, ...).

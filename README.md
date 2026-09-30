@@ -29,7 +29,7 @@ Read them in this order. Each one adds a few ideas to the one before.
 | [`fan-out`](fan-out) | `examples.fan-out` | One job spawns one child job per value (`ChildSpec` + `spawn`), gathers them, and aggregates their results; the children read a file from the parent's workdir in place through `a.parent`; a failing child routes the parent to a triage step. |
 | [`compose`](compose) | `examples.compose` | A workflow that calls another workflow (`hello`, by git URI) with `Attempt.call`, waits for it, and builds on its result. Its default URI needs network access and the pushed repository (see below). |
 | [`subworkflow-child`](subworkflow-child) | `examples.subworkflow-child` | A one-step workflow that writes the square root of a number to `root.txt`: the workflow the two subworkflow examples call. Nothing in it knows it is called. |
-| [`subworkflow`](subworkflow) | `examples.subworkflow` | A parent that declares `examples.subworkflow-child` in `[workflow.calls]` and calls it by alias once per value (`a.call("child", ...)`), gathers the calls, and adds up their results through `a.children`; `spawn` versus `call`, why called workflows are declared (checked at creation, not claimed until installed or built, undeclared calls refused), commit-pinned git URIs in `[workflow.calls]`, children moving with their parent, and one declaration per workflow; `httk workflow collect --into` then stores one run per job, each naming its own declaration, with the parent's run linked to its children's runs. Needs the child installed (see below). |
+| [`subworkflow`](subworkflow) | `examples.subworkflow` | A parent that declares `examples.subworkflow-child` in `[workflow.calls]` and calls it by alias once per value (`a.call("child", ...)`), gathers the calls, and adds up their results through `a.children`; `spawn` versus `call`, why called workflows are declared (checked at creation, not claimed until installed or built, undeclared calls refused), commit-pinned git URIs in `[workflow.calls]`, children moving with their parent, and one declaration per workflow; `httk collect --into` then stores one run per job, each naming its own declaration, with the parent's run linked to its children's runs. Needs the child installed (see below). |
 | [`subworkflow-bash`](subworkflow-bash) | `examples.subworkflow-bash` | The same parent in Bash (`httk_workflow_parameter_items` iterating the same JSON-array `values`, `httk_workflow_call`, `httk_workflow_children`), calling the same Python child: a call names a workflow, not a language. |
 | [`chain-leaf`](chain-leaf) | `examples.chain-leaf` | The bottom of a three-language chain: a one-step Python workflow that starts `trail.txt`. |
 | [`chain-rust`](chain-rust) | `examples.chain-rust` | The middle, a compiled Rust workflow on the native Rust SDK: `Attempt::call` of its declared `leaf` (`examples.chain-leaf`), `gather`, reading the child's workdir; `[workflow.build]`, `command = ["{artifacts}/chain"]`, and a Makefile that stages the installed SDK crate. Needs `cargo` and `make`, and a one-time `httk workflow build`. |
@@ -61,7 +61,7 @@ httk workspace settings set --key vasp.command --value "srun -n 16 vasp_std" def
 httk job new --workflow 'git+https://github.com/httk/workflows-examples#vasp-relax-annotated' \
     --input structure=Si.cif
 httk workflow run
-httk workflow collect
+httk collect
 httk workflow postprocess --script summary --workflow-dir ./vasp-relax-annotated   # from a checkout
 ```
 
@@ -139,7 +139,7 @@ metadata):
 | `[workflow.calls]` (alias = workflow name or commit-pinned git URI) | — (the runner calls the alias) | checked at submission and at claim; at run time only declared calls are allowed | `subworkflow`, `chain`, `chain-rust` |
 | `[workflow.build]` (`command`, `platform`, `artifacts`) | `Makefile`, `Cargo.toml`, `src/main.rs` | once per machine, by `httk workflow build`; the runner is then `command = ["{artifacts}/chain"]` | `chain-rust` |
 | `[workflow.instantiate] file` | `instantiate.py` (in-process) or `instantiate` (executable, JSON; any name without `.py`) | at submission, on the submitting machine, after the required-input check | both VASP examples |
-| `[workflow.collect] file` | `collect.py` (in-process) or an executable (JSON lines) | at `httk workflow collect` | both VASP examples |
+| `[workflow.collect] file` | `collect.py` (in-process) or an executable (JSON lines) | at `httk collect` | both VASP examples |
 | `[workflow.postprocess.NAME]` | any executable (`scripts/summary.py`, `scripts/summary.sh`) | on request, after collection | both VASP examples |
 
 A few distinctions the examples keep coming back to:
@@ -166,7 +166,7 @@ A few distinctions the examples keep coming back to:
   URI its authors control.
 - **Collect vs postprocess.** The collect hook turns a finished job into httk
   entries (a structure, a `DataRecord`) under declared roles, which
-  `httk workflow collect --into results.sqlite` can store. A postprocess
+  `httk collect --into results.sqlite` can store. A postprocess
   script is for anything else a person wants afterwards (a report, a plot); it
   writes only to its own output directory.
 

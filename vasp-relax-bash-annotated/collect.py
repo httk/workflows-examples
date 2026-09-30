@@ -11,7 +11,7 @@ object, which the in-process form returns directly.
 What this example shows:
 
 * a Python collect hook is a module with ``def collect(record)``; it runs
-  when someone collects the workspace (``httk workflow collect``, or
+  when someone collects the workspace (``httk collect``, or
   ``httk.workflow.collect(workspace)`` in Python), long after the job ran;
 * ``record`` is a ``httk.workflow.JobRecord``: a read-only description of one
   finished job, with absolute paths such as ``record.workdir``;

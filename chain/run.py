@@ -28,7 +28,7 @@ What this example shows:
 
 The three jobs form one tree (the leaf is a child of the Rust job, which is a
 child of this job), stay in this job's workspace, and move together on
-transfer. ``httk workflow collect --into STORE --id-base BASE`` stores one run
+transfer. ``httk collect --into STORE --id-base BASE`` stores one run
 per job, each naming its own declaration, with every parent's run linked to
 its child's.
 

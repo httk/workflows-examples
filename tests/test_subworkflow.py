@@ -3,7 +3,7 @@
 The child is resolved by name inside the parent's runner process, so these
 tests install this working tree as a plugin first (the ``installed_examples``
 fixture), exactly as ``httk plugin install`` would; nothing uses the network.
-Collecting the finished tree into a store (``httk workflow collect --into``)
+Collecting the finished tree into a store (``httk collect --into``)
 then leaves one linked run per job; that needs *httk-store* and is skipped
 without it.
 """
@@ -117,7 +117,7 @@ def test_the_child_runs_on_its_own_by_name(tmp_path: Path) -> None:
 
 
 def _collect_runs(tmp_path: Path, workspace: Workspace, *extra: str) -> list[Run]:
-    """Run ``httk workflow collect --into`` on the workspace and read the stored runs back."""
+    """Run ``httk collect --into`` on the workspace and read the stored runs back."""
 
     from httk.store import Backend, SqlStore
 
