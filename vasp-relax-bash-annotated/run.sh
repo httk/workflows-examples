@@ -98,7 +98,8 @@ step_run() {
     # httk_vasp_run supervises VASP and answers with its exit status. `|| status=$?`
     # keeps `set -e` from ending the step on a nonzero status we want to read.
     status=0
-    # The command is one argv string (e.g. "srun -n 32 vasp_std"), so it is
+    # The command is one argv string (e.g. "vasp_std"; the parallel start comes
+    # from the launch prefix HTTK_WORKFLOW_LAUNCH), so it is
     # deliberately unquoted and split into words.
     # shellcheck disable=SC2086
     httk_vasp_run --directory . --timeout "$(httk_workflow_parameter timeout)" \

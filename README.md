@@ -57,7 +57,7 @@ The VASP examples take a structure file in any format httk reads, and need
 the VASP command as a workspace setting (or `HTTK_VASP_COMMAND`):
 
 ```console
-httk workspace settings set --key vasp.command --value "srun -n 16 vasp_std" default
+httk workspace settings set --key vasp.command --value vasp_std default
 httk job new --workflow 'git+https://github.com/httk/workflows-examples#vasp-relax-annotated' \
     --input structure=Si.cif
 httk workflow run

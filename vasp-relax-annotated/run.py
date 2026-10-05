@@ -109,8 +109,10 @@ def run_step(a: Attempt) -> None:
     # A setting is resolved at run time, most specific first: a `vasp.command`
     # job parameter, the HTTK_VASP_COMMAND environment variable on this
     # machine, then the workspace setting (`httk workspace settings set
-    # --key vasp.command --value "srun vasp_std" WORKSPACE`). The same job can
-    # therefore run on two clusters with two different VASP commands.
+    # --key vasp.command --value vasp_std WORKSPACE`). The same job can
+    # therefore run on two clusters with two different VASP commands. The
+    # command names only the program; the parallel start (srun, mpirun) comes
+    # from the attempt's launch prefix, HTTK_WORKFLOW_LAUNCH.
     argv = shlex.split(a.setting("vasp.command", None) or "")
     if not argv:
         # A failure has a stable code (for `retry_on` and for triage) and a
