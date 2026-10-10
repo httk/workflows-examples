@@ -15,6 +15,7 @@ from httk.atomistic import UnitcellStructureView
 from httk.core import DataRecord
 from httk.core.cli import CLIContext
 from httk.workflow import Workspace, collect
+from httk.workflow.introspection import iter_jobs, resolve_job
 from httk.workflow.packages import load_workflow_package
 from httk.workflow.postprocessing import run_postprocess_script
 from httk.workflow.workflow_cli import command
@@ -22,6 +23,7 @@ from httk.workflow.workflow_cli import command
 from conftest import (
     REPO_ROOT,
     SILICON,
+    failure,
     job_parameters,
     job_state,
     mock_vasp_workspace,
@@ -46,12 +48,12 @@ def _structure(tmp_path: Path, text: str = SILICON) -> Path:
 @pytest.mark.parametrize("directory", PACKAGES)
 def test_relaxation_instantiates_runs_collects_and_postprocesses(tmp_path: Path, directory: str) -> None:
     workspace = mock_vasp_workspace(tmp_path / "workspace")
-    marker, payload = run_one(workspace, REPO_ROOT / directory, inputs={"structure": str(_structure(tmp_path))})
-    assert marker.kind == "succeeded", workspace.read_state(marker).get("failure")
+    ref, payload = run_one(workspace, REPO_ROOT / directory, inputs={"structure": str(_structure(tmp_path))})
+    assert ref.state == "succeeded", failure(ref)
 
     # The instantiate hook: tag from the reduced formula, POSCAR written with
     # the httk writer, spin_polarized derived and recorded with the defaults.
-    assert marker.job_key.startswith("si--")
+    assert ref.job_key.startswith("si--")
     staged = UnitcellStructureView(httk.core.load(str(payload / "files" / "POSCAR"), precision=5e-4))
     assert staged.chemical_formula_reduced == "Si"
     parameters = job_parameters(payload)
@@ -86,24 +88,24 @@ def test_relaxation_instantiates_runs_collects_and_postprocesses(tmp_path: Path,
 @pytest.mark.parametrize("directory", PACKAGES)
 def test_a_caller_tag_and_spin_choice_win_over_the_derived_ones(tmp_path: Path, directory: str) -> None:
     workspace = mock_vasp_workspace(tmp_path / "workspace")
-    marker, payload = run_one(
+    ref, payload = run_one(
         workspace,
         REPO_ROOT / directory,
         inputs={"structure": str(_structure(tmp_path, IRON))},
         tag="my-iron",
         parameters={"spin_polarized": False},
     )
-    assert marker.kind == "succeeded"
-    assert marker.job_key.startswith("my-iron--")
+    assert ref.state == "succeeded"
+    assert ref.job_key.startswith("my-iron--")
     assert job_parameters(payload)["spin_polarized"] is False
 
 
 @pytest.mark.parametrize("directory", PACKAGES)
 def test_a_magnetic_element_turns_spin_polarization_on(tmp_path: Path, directory: str) -> None:
     workspace = mock_vasp_workspace(tmp_path / "workspace")
-    marker, payload = run_one(workspace, REPO_ROOT / directory, inputs={"structure": str(_structure(tmp_path, IRON))})
-    assert marker.kind == "succeeded"
-    assert marker.job_key.startswith("fe--")
+    ref, payload = run_one(workspace, REPO_ROOT / directory, inputs={"structure": str(_structure(tmp_path, IRON))})
+    assert ref.state == "succeeded"
+    assert ref.job_key.startswith("fe--")
     assert job_parameters(payload)["spin_polarized"] is True
     assert "ISPIN = 2" in (payload / "run" / "INCAR").read_text(encoding="utf-8")
 
@@ -117,8 +119,8 @@ def test_a_structure_object_and_a_cif_file_are_accepted(tmp_path: Path, director
     httk.core.save(structure, cif)
     workspace = mock_vasp_workspace(tmp_path / "workspace")
     for value in (structure, str(cif)):
-        marker, payload = run_one(workspace, REPO_ROOT / directory, inputs={"structure": value})
-        assert marker.kind == "succeeded"
+        ref, payload = run_one(workspace, REPO_ROOT / directory, inputs={"structure": value})
+        assert ref.state == "succeeded"
         assert (payload / "files" / "POSCAR").read_text(encoding="utf-8").splitlines()[5].split() == ["Si"]
 
 
@@ -127,7 +129,7 @@ def test_overlapping_atoms_are_refused_at_submission(tmp_path: Path, directory: 
     workspace = mock_vasp_workspace(tmp_path / "workspace")
     with pytest.raises(ValueError, match=r"only 0\.100 Angstrom apart"):
         run_one(workspace, REPO_ROOT / directory, inputs={"structure": str(_structure(tmp_path, OVERLAPPING))})
-    assert list(workspace.scan_markers()) == []  # no job was created
+    assert list(iter_jobs(workspace)) == []  # no job was created
 
 
 @pytest.mark.parametrize("directory", PACKAGES)
@@ -144,8 +146,8 @@ def test_a_diagnosed_vasp_failure_is_remedied_once(
 ) -> None:
     monkeypatch.setenv("HTTK_MOCK_VASP_FAIL_ONCE", "1")
     workspace = mock_vasp_workspace(tmp_path / "workspace")
-    marker, payload = run_one(workspace, REPO_ROOT / directory, inputs={"structure": str(_structure(tmp_path))})
-    assert marker.kind == "succeeded"
+    ref, payload = run_one(workspace, REPO_ROOT / directory, inputs={"structure": str(_structure(tmp_path))})
+    assert ref.state == "succeeded"
     assert job_state(payload)["remedies"] == 1
     # The first rung of the ZPOTRF ladder scales the lattice by five percent.
     assert (payload / "run" / "POSCAR").read_text(encoding="utf-8").splitlines()[1].strip() == "1.05"
@@ -155,24 +157,24 @@ def test_a_diagnosed_vasp_failure_is_remedied_once(
 def test_the_remedy_budget_is_respected(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, directory: str) -> None:
     monkeypatch.setenv("HTTK_MOCK_VASP_FAIL_ONCE", "1")
     workspace = mock_vasp_workspace(tmp_path / "workspace")
-    marker, _payload = run_one(
+    ref, _payload = run_one(
         workspace,
         REPO_ROOT / directory,
         inputs={"structure": str(_structure(tmp_path))},
         parameters={"maximum_remedies": 0},
     )
-    assert marker.kind == "failed"
-    failure = workspace.read_state(marker)["failure"]
-    assert failure["code"] == "vasp.failed"
-    assert "after 0 remedies" in failure["message"]
+    assert ref.state == "failed"
+    recorded = failure(ref)
+    assert recorded["code"] == "vasp.failed"
+    assert "after 0 remedies" in recorded["message"]
 
 
 @pytest.mark.parametrize("directory", PACKAGES)
 def test_no_vasp_command_fails_by_name(tmp_path: Path, directory: str) -> None:
     workspace = Workspace.initialize(tmp_path / "workspace")
-    marker, _payload = run_one(workspace, REPO_ROOT / directory, inputs={"structure": str(_structure(tmp_path))})
-    assert marker.kind == "failed"
-    assert workspace.read_state(marker)["failure"]["code"] == "vasp.command_missing"
+    ref, _payload = run_one(workspace, REPO_ROOT / directory, inputs={"structure": str(_structure(tmp_path))})
+    assert ref.state == "failed"
+    assert failure(ref)["code"] == "vasp.command_missing"
 
 
 def test_the_command_line_passes_a_structure_path_to_the_hook(
@@ -183,6 +185,7 @@ def test_the_command_line_passes_a_structure_path_to_the_hook(
     arguments = [
         "job",
         "new",
+        "--install",
         "--workspace",
         name,
         "--workflow-dir",
@@ -193,8 +196,9 @@ def test_the_command_line_passes_a_structure_path_to_the_hook(
         "kpoint_density=30",
     ]
     assert command(arguments, CLIContext("httk", tmp_path)) == 0
-    key, payload = capsys.readouterr().out.strip().split("\t")
+    key, _ready = capsys.readouterr().out.strip().split("\t")
     assert key.startswith("si--")
     run_idle(workspace)
-    assert json.loads((Path(payload) / "job.json").read_text(encoding="utf-8"))["parameters"]["kpoint_density"] == 30
-    assert job_state(Path(payload))["classification"] == "completed"
+    payload = resolve_job(workspace, key).path
+    assert json.loads((payload / "job.json").read_text(encoding="utf-8"))["parameters"]["kpoint_density"] == 30
+    assert job_state(payload)["classification"] == "completed"

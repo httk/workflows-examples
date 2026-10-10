@@ -5,7 +5,7 @@
 
 [workflow]
 # The workflow's name. It is written into every job's job.json, and once this
-# package has been referenced by git URI it is also the short name that
+# package has been installed in a workspace it is also the short name that
 # selects it (`httk job new --workflow examples.hello`).
 name = "examples.hello"
 description = "write a greeting to a file: the smallest possible workflow"

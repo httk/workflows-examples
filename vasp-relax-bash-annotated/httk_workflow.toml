@@ -32,9 +32,8 @@ entry = "run.sh"
 # Must equal, as a set, the steps run.sh registers (`./run.sh --describe` lists them).
 steps = ["prepare", "run", "publish"]
 initial_step = "prepare"
-# "none": the persistent workdir is the result. "transactional" would give the
-# job a separate data/ directory that steps publish into with httk_workflow_put.
-data_mode = "none"
+# The persistent workdir (run/) is the result. Steps may also publish curated
+# files into the job's data/ directory with httk_workflow_put; this one does not.
 
 # An *input* is what the workflow operates on; it is part of the declaration
 # and becomes the input role of the recorded provenance. There is no

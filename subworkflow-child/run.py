@@ -16,9 +16,9 @@ Try it on its own:
 
 .. code-block:: console
 
-    httk job new --workflow-dir subworkflow-child --parameter value=2
+    httk job new --install --workflow-dir subworkflow-child --parameter value=2
     httk workflow run
-    cat PAYLOAD/run/root.txt
+    httk job show KEY    # then read root.txt in the workdir it names
 """
 
 import math

@@ -16,13 +16,11 @@ steps = ["start", "finish", "middle_failed"]
 initial_step = "start"
 
 # The workflow this one calls, by alias: run.py calls "middle". Because the
-# dependency is declared, a job of this workflow is refused at creation if
-# examples.chain-rust is unknown, and a manager does not claim it until
-# chain-rust is *built* on its machine: `httk job why` and
-# `httk workflow precheck` name it as not built. One command builds it:
-#     httk workflow build examples.chain
-# builds every compiled workflow this one declares it calls, transitively
-# (here chain-rust; chain-leaf needs no build). A git dependency goes here as
-# a commit-pinned URI, never in the code.
+# dependency is declared, installing this workflow installs examples.chain-rust
+# (and, transitively, chain-leaf) and builds chain-rust unless given
+# `--no-build`; a manager does not claim a job until chain-rust is *built* in
+# its workspace: `httk job why` and `httk workflow precheck` name it as not
+# built, and `httk workflow build examples.chain-rust` builds it. A git
+# dependency goes here as a commit-pinned URI, never in the code.
 [workflow.calls]
 middle = "examples.chain-rust"

@@ -2,8 +2,9 @@
 
 The isolation fixtures and the normal/extended test-depth knob are those of
 workflows-vasp's ``tests/conftest.py``. The helpers run jobs the way a user
-does: :func:`httk.workflow.scaffold.new_job` on a package directory (what
-``httk job new --workflow-dir`` calls) and a real
+does: :func:`httk.workflow.scaffold.new_job` on a package directory, installing
+it into the workspace first (what ``httk job new --install --workflow-dir``
+calls), and a real
 :class:`httk.workflow.TaskManager` until the workspace is idle.
 """
 
@@ -19,7 +20,8 @@ from typing import Any
 
 import pytest
 from httk.workflow import TaskManager, Workspace
-from httk.workflow.models import Marker
+from httk.workflow.introspection import read_state, resolve_job
+from httk.workflow.protocol import JobRef
 from httk.workflow.registry import register_workspace
 from httk.workflow.scaffold import new_job
 
@@ -122,14 +124,21 @@ def mock_vasp_workspace(root: Path) -> Workspace:
     return workspace
 
 
-def run_one(workspace: Workspace, workflow: object, **job: Any) -> tuple[Marker, Path]:
-    """Create one job with :func:`new_job`, run the workspace to idle, and return its marker and payload."""
+def run_one(workspace: Workspace, workflow: Any, **job: Any) -> tuple[JobRef, Path]:
+    """Install *workflow*, create one job of it, run the workspace to idle, and return the job and its payload."""
 
-    created = new_job(workspace, workflow, **job)
+    created = new_job(workspace, workflow, install=True, **job)
     run_idle(workspace)
-    marker = workspace.find_marker_by_id(created.job_id)
-    assert marker is not None
-    return marker, workspace.payload_path(marker.placement, marker.job_key)
+    ref = resolve_job(workspace, created.job_id)
+    return ref, ref.path
+
+
+def failure(ref: JobRef) -> Any:
+    """The job's recorded failure (``code``, ``message``, ``details``), or ``None``."""
+
+    state, damaged = read_state(ref)
+    assert damaged is None, damaged
+    return None if state is None else state.failure
 
 
 def run_idle(workspace: Workspace) -> None:

@@ -3,11 +3,10 @@
 
 What this example shows:
 
-* ``a.call(workflow, label=...)`` creates a child job of a *different*
-  workflow, which runs that workflow's own runner. The workflow is named the
-  way ``httk job new --workflow`` names one: here a git URI, which is fetched
-  and installed the first time it is used and pinned to a commit in the
-  child's job.json;
+* ``a.call(alias, label=...)`` creates a child job of a *different*
+  workflow, which runs that workflow's own runner. The alias is declared in
+  ``[workflow.calls]`` of httk_workflow.toml, and the called workflow is
+  installed in the workspace together with this one;
 * the caller waits with ``a.gather`` exactly as for spawned children (see
   ../fan-out), and reads the child's files through ``a.children``;
 * results move between workflows explicitly: this step reads the child's
@@ -33,13 +32,10 @@ run = Runner("examples.compose")
 def start(a: Attempt) -> None:
     """Call the hello workflow as a child job, then wait for it."""
 
-    # Both parameters are declared with defaults in httk_workflow.toml, so
-    # they are always in job.json. hello_workflow defaults to the hello
-    # package of this repository by git URI; a test or a local checkout can
-    # pass another URI, a short name, or a directory.
-    workflow = a.parameter("hello_workflow")
+    # "hello" is the alias [workflow.calls] declares; name is declared with a
+    # default in httk_workflow.toml, so it is always in job.json.
     # parameters= are the child's job parameters, exactly as `--parameter`.
-    a.call(workflow, label="hello", parameters={"name": a.parameter("name")})
+    a.call("hello", label="hello", parameters={"name": a.parameter("name")})
     a.gather("finish", when="all_succeeded", on_impossible="dependency_failed")
 
 
@@ -48,7 +44,7 @@ def finish(a: Attempt) -> None:
     """Read the child's greeting and write our own answer next to it."""
 
     hello = a.children["hello"]  # by label
-    # hello runs with data_mode "none", so its result is its workdir.
+    # hello leaves its result in its workdir.
     greeting = (hello.workdir / "greeting.txt").read_text(encoding="utf-8").strip()
     (a.workdir / "composed.txt").write_text(f"The hello workflow said: {greeting}\n", encoding="utf-8")
     a.log.append("note", f"child {hello.job_key} said {greeting!r}")

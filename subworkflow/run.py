@@ -22,15 +22,16 @@ on a workflow instead of copying its steps. Both kinds of child are gathered
 and read back the same way.
 
 Why declare what is called: the dependency is then known before anything
-runs. ``httk job new`` refuses a job whose declared call does not resolve
-(and records the calls in its job.json); a manager does not claim the job
-until the called workflow is installed, and built if it is compiled, on its
-own machine (``httk job why`` and ``httk workflow precheck`` say what is
-missing); and at run time the job may call only what it declares, so a typo
-or a stray name in the code is refused rather than silently fetched. The name
-is resolved on the machine where the job runs, so install the child there
-(for example with ``httk plugin install`` of this repository, which installs
-every package in it). To call a workflow from a git repository, put its
+runs. Installing this workflow in a workspace (``httk workflow install``, or
+``httk job new --install``) installs the declared calls too and records them by
+id; a manager does not claim the job until the called workflow is installed,
+and built if it is compiled, in its workspace (``httk job why`` and ``httk
+workflow precheck`` say what is missing); and at run time the job may call only
+what it declares, so a typo or a stray name in the code is refused rather than
+silently fetched. The name is resolved on the machine where the workflow is
+installed, so make the child known there (for example with ``httk plugin
+install`` of this repository, which registers every package in it). To call a
+workflow from a git repository, put its
 commit-pinned git URI in ``[workflow.calls]`` instead of a name, never in the
 code or a parameter::
 

@@ -150,7 +150,7 @@ step_run() {
     httk_workflow_retry "applied a remedy for $problem"
 }
 
-# Finish the job; with data_mode = "none" the workdir is the result.
+# Finish the job; the workdir is the result.
 step_publish() {
     httk_workflow_runlog_note "relaxed; final energy $(httk_workflow_state_get energy || echo unknown) eV"
     httk_workflow_succeed

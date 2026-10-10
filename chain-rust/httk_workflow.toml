@@ -1,16 +1,18 @@
 # The middle of the three-language chain, a compiled Rust workflow. It is called
 # by examples.chain (Python) and itself calls examples.chain-leaf (Python).
 #
-# A compiled package is published as *sources only*; each machine builds and
-# registers its own binary once, in the foreground, before jobs run:
+# A compiled package is published as *sources only*; each workspace builds and
+# registers its own binary in the foreground, before jobs run. Installing it
+# (`httk workflow install --workspace WORKSPACE examples.chain-rust`, by name
+# for an installed plugin or by path, `./chain-rust`, for a checkout, or by
+# installing a workflow that calls it) builds it unless given `--no-build`;
+# it is rebuilt with
 #
 #     httk workflow build --workspace WORKSPACE examples.chain-rust
 #
-# by name (for an installed plugin) or by path (`./chain-rust`, for a
-# checkout). Managers never build. A workflow that declares this one in its
+# Managers never build. A workflow that declares this one in its
 # [workflow.calls] (../chain) is not even claimed until this binary is built
-# on the manager's machine, and `httk workflow build examples.chain` builds it
-# along with the caller.
+# on the manager's platform.
 
 [workflow]
 name = "examples.chain-rust"

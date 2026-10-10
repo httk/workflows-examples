@@ -167,9 +167,9 @@ def run_step(a: Attempt) -> None:
 def publish(a: Attempt) -> None:
     """Finish the job; the workdir is the result."""
 
-    # With data_mode = "none" the persistent workdir is the result, and
-    # collect.py reads CONTCAR and OUTCAR from it. A transactional workflow
-    # would publish curated files here instead, e.g. a.put("CONTCAR", "CONTCAR").
+    # The persistent workdir is the result, and collect.py reads CONTCAR and
+    # OUTCAR from it. A workflow could publish curated files into data/ here
+    # instead, e.g. a.put("CONTCAR", "CONTCAR").
     a.log.append("note", f"relaxed; final energy {a.state.get('energy')} eV")
     a.succeed()
 

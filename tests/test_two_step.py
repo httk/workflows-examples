@@ -5,14 +5,14 @@ from pathlib import Path
 import pytest
 from httk.workflow import Workspace
 
-from conftest import REPO_ROOT, job_state, run_one
+from conftest import REPO_ROOT, failure, job_state, run_one
 
 
 @pytest.mark.parametrize("directory", ("two-step", "two-step-bash"))
 def test_two_step_hands_a_file_and_a_state_value_to_the_second_step(tmp_path: Path, directory: str) -> None:
     workspace = Workspace.initialize(tmp_path / "workspace")
-    marker, payload = run_one(workspace, REPO_ROOT / directory, parameters={"text": "to be or not to be"})
-    assert marker.kind == "succeeded", workspace.read_state(marker).get("failure")
+    ref, payload = run_one(workspace, REPO_ROOT / directory, parameters={"text": "to be or not to be"})
+    assert ref.state == "succeeded", failure(ref)
     # Step one's file, still in the persistent workdir ...
     assert (payload / "run" / "words.txt").read_text(encoding="utf-8") == "to\nbe\nor\nnot\nto\nbe\n"
     # ... and its value in job state, stored as a JSON number.
@@ -24,6 +24,6 @@ def test_two_step_hands_a_file_and_a_state_value_to_the_second_step(tmp_path: Pa
 @pytest.mark.parametrize("directory", ("two-step", "two-step-bash"))
 def test_two_step_runs_with_its_default_text(tmp_path: Path, directory: str) -> None:
     workspace = Workspace.initialize(tmp_path / "workspace")
-    marker, payload = run_one(workspace, REPO_ROOT / directory)
-    assert marker.kind == "succeeded", workspace.read_state(marker).get("failure")
+    ref, payload = run_one(workspace, REPO_ROOT / directory)
+    assert ref.state == "succeeded", failure(ref)
     assert (payload / "run" / "report.txt").read_text(encoding="utf-8") == "9 words; the longest is 'quick'\n"

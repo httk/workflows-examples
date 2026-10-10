@@ -23,8 +23,8 @@
 //!     start --call examples.chain-leaf--> (child) --gather--> finish --> (succeeded)
 //!                                                     \-----> leaf_failed
 //!
-//! Build it with `httk workflow build examples.chain-rust` (or build a
-//! workflow that calls it, see httk_workflow.toml); a bare
+//! It is built when installed (or by `httk workflow build examples.chain-rust`,
+//! see httk_workflow.toml); a bare
 //! `cargo build` lacks the SDK crate the Makefile stages under target/sdk.
 
 use std::fs;

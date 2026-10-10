@@ -17,14 +17,16 @@ What this example shows:
       examples.chain-rust (Rust)
       examples.chain (Python)
 
-* declared dependencies are checked before anything runs. The Rust
-  workflow is compiled and must be *built* where it runs (managers never
-  build); until it is, a manager leaves a job of this workflow unclaimed, and
-  ``httk job why`` / ``httk workflow precheck`` name chain-rust as not built.
-  ``httk workflow build examples.chain`` builds it, because building a
-  workflow by name builds every workflow it declares it calls, transitively.
-  All three names must resolve on the machine where the jobs run, e.g. after
-  ``httk plugin install`` of this repository.
+* declared dependencies are checked before anything runs. Installing this
+  workflow in a workspace (``httk workflow install examples.chain``, or
+  ``httk job new --install``) installs every workflow it declares it calls,
+  transitively, so all three names must resolve where it is installed, e.g.
+  after ``httk plugin install`` of this repository. The Rust workflow is
+  compiled and must be *built* (managers never build): the install builds it
+  unless given ``--no-build``, and until it is built a manager leaves a job of
+  this workflow unclaimed, ``httk job why`` / ``httk workflow precheck`` name
+  chain-rust as not built, and ``httk workflow build examples.chain-rust``
+  builds it.
 
 The three jobs form one tree (the leaf is a child of the Rust job, which is a
 child of this job), stay in this job's workspace, and move together on

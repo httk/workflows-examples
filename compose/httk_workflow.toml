@@ -3,7 +3,7 @@
 
 [workflow]
 name = "examples.compose"
-description = "call another workflow by git URI, wait for it, and use its result"
+description = "call another workflow, wait for it, and use its result"
 requires = ["httk-workflow>=2.1.1"]
 
 [workflow.runner]
@@ -11,12 +11,16 @@ entry = "run.py"
 steps = ["start", "finish", "dependency_failed"]
 initial_step = "start"
 
-[workflow.parameters.hello_workflow]
-type = "string"
-default = "git+https://github.com/httk/workflows-examples#hello"
-description = "The workflow to call: a git URI, a short name, or a package directory."
-
 [workflow.parameters.name]
 type = "string"
 default = "composer"
 description = "Who the called workflow greets."
+
+# The workflow this one calls, by alias: the runner calls `hello`, never a
+# workflow name. It is installed with this workflow (`httk workflow install`
+# and `httk job new --install` install declared calls too), and a job may call
+# only what is declared here. To call it from its git repository instead, pin
+# the git URI to a full commit:
+#   hello = "git+https://github.com/httk/workflows-examples@<full commit>#hello"
+[workflow.calls]
+hello = "examples.hello"

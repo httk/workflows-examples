@@ -26,9 +26,9 @@ Try it:
 
 .. code-block:: console
 
-    httk job new --workflow-dir two-step --parameter 'text=to be or not to be'
+    httk job new --install --workflow-dir two-step --parameter 'text=to be or not to be'
     httk workflow run
-    cat PAYLOAD/run/report.txt
+    httk job show KEY    # then read report.txt in the workdir it names
 """
 
 from httk.workflow import Attempt, Runner

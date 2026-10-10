@@ -35,8 +35,8 @@ def collect(record):
     :raises ValueError: If the job's files are missing or unreadable.
     """
 
-    # This workflow runs with data_mode = "none", so its results are in the
-    # persistent workdir. (A transactional job would read record.data.)
+    # This workflow leaves its results in the persistent workdir. (Files a
+    # job published with a.put would be read from record.data.)
     workdir = record.workdir
     if workdir is None:
         raise ValueError(f"job {record.job_id} has no workdir to collect from")

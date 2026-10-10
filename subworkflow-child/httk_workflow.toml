@@ -3,10 +3,9 @@
 # workflow that a person could just as well submit with `httk job new`.
 
 [workflow]
-# The name the callers use: `a.call("examples.subworkflow-child", ...)`. It
-# resolves on the machine where the calling step runs, because this package is
-# registered or installed there (e.g. with `httk plugin install` of this
-# repository).
+# The name the callers declare in [workflow.calls]. It resolves where a caller
+# is installed into a workspace, because this package is registered there (e.g.
+# with `httk plugin install` of this repository), and is installed with it.
 name = "examples.subworkflow-child"
 description = "write the square root of one non-negative number to root.txt"
 # The child has its own declaration, independent of its callers': a job of

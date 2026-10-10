@@ -13,9 +13,9 @@ Try it:
 
 .. code-block:: console
 
-    httk job new --workflow-dir hello --parameter name=Ada   # prints KEY<tab>PAYLOAD
-    httk workflow run                                          # runs until idle
-    cat PAYLOAD/run/greeting.txt                               # run/ is the workdir
+    httk job new --install --workflow-dir hello --parameter name=Ada   # prints KEY<tab>PAYLOAD
+    httk workflow run                                                    # runs until idle
+    httk job show KEY      # the payload moves as the job runs; its workdir/greeting.txt
 """
 
 from httk.workflow import Attempt, Runner
