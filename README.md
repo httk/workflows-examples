@@ -120,6 +120,17 @@ httk workflow run
 httk workflow build examples.chain-rust   # only after an install with --no-build, or to rebuild
 ```
 
+### Install with pip
+
+From a clone, `pip install -e .` or `pip install .` installs the examples'
+dependencies and makes every workflow of this repository known to *httk₂* in
+that Python environment, at HEAD and at every `wf-v*` tag, each under its
+GitHub commit URI. Only committed content is installed; use a package path
+for a working copy. An editable install follows `git pull` (restart running
+httk processes); a non-editable install at an unchanged version picks up new
+tags only with `pip install --force-reinstall --no-deps .`. Shallow clones are
+refused (`git fetch --unshallow --tags`).
+
 ## Anatomy of a package
 
 A package is a directory with an `httk_workflow.toml` manifest and the files
