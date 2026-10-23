@@ -34,6 +34,7 @@ Read them in this order. Each one adds a few ideas to the one before.
 | [`chain-leaf`](chain-leaf) | `examples.chain-leaf` | The bottom of a three-language chain: a one-step Python workflow that starts `trail.txt`. |
 | [`chain-rust`](chain-rust) | `examples.chain-rust` | The middle, a compiled Rust workflow on the native Rust SDK: `Attempt::call` of its declared `leaf` (`examples.chain-leaf`), `gather`, reading the child's workdir; `[workflow.build]`, `command = ["{artifacts}/chain"]`, and a Makefile that stages the installed SDK crate. Needs `cargo` and `make`; it is built when installed (or by `httk workflow build`). |
 | [`chain`](chain) | `examples.chain` | The top: a Python workflow calls the Rust one through its declared `middle`, which calls the Python leaf; installing it installs the whole chain and builds chain-rust, and its jobs wait unclaimed while chain-rust is not built; the trail comes back up with one line per level. Calls nest and cross languages. |
+| [`ase-static`](ase-static) | `ase.static` | A single point with any ASE calculator (EMT by default): an input staged to `files/POSCAR` without a hook, a calculator chosen by a `module:Class` parameter, a runner that writes `results.json`, and a collect hook that turns it into `total_energy` and `cartesian_site_forces` records. Needs ASE (`pip install ase`); a structure-to-forces callee for call slots. See its [README](ase-static/README.md). |
 
 ## Running an example
 
@@ -97,7 +98,7 @@ committed local clone.
 httk plugin install 'git+https://github.com/httk/workflows-examples'
 ```
 
-installs all fourteen packages listed in `httk_plugin.toml` at once; their
+installs all fifteen packages listed in `httk_plugin.toml` at once; their
 workflow names then resolve directly. The compose, subworkflow and chain
 examples rely on that: they declare the workflows they call in
 `[workflow.calls]` by name, and installing a workflow into a workspace

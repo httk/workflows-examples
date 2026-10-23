@@ -47,6 +47,7 @@ PACKAGES = (
     "chain",
     "chain-rust",
     "chain-leaf",
+    "ase-static",
 )
 # Packages whose runner is a compiled binary built by `httk workflow build`,
 # with the executables their build needs.

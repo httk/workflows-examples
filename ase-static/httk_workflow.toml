@@ -1,0 +1,55 @@
+# A single point with any ASE calculator: the energy and the forces of one
+# structure. It needs no external code with the default EMT calculator, so it
+# is also a cheap "structure -> energy + forces" callee to bind into a call
+# slot (see README.md).
+
+[workflow]
+name = "ase.static"
+description = "evaluate the total energy and the site forces of one structure with an ASE calculator"
+# ASE is needed where the job runs; httk-atomistic writes a structure object
+# given as the input into POSCAR at submission.
+requires = ["httk-workflow>=2.1.1", "httk-core>=2.1.2", "httk-atomistic>=2.1.2", "ase>=3.22"]
+
+[workflow.runner]
+entry = "run.py"
+steps = ["evaluate"]
+
+# With a `destination`, the framework stages the input itself: a file is
+# copied to files/POSCAR as it is (so it must be a POSCAR), and a structure
+# object is written there with the httk POSCAR writer.
+[workflow.inputs.structure]
+destination = "POSCAR"
+role = "initial_structure"
+entry_type = "structures"
+ref = "https://schemas.optimade.org/defs/v1.3/entrytypes/optimade/structures"
+description = "The structure to evaluate, as a POSCAR file or a structure object."
+required = true
+
+[workflow.parameters.calculator]
+type = "string"
+default = "ase.calculators.emt:EMT"
+description = "The ASE calculator class, as module:Class; it must be importable where the job runs."
+
+[workflow.parameters.calculator_kwargs]
+type = "object"
+default = {}
+description = "Keyword arguments for the calculator class."
+
+# Both outputs are properties of the structure as it was given: the forces are
+# in its Cartesian frame and site order.
+[workflow.outputs.total_energy]
+entry_type = "records"
+role = "total_energy"
+ref = "https://schemas.httk.org/defs/v0.1/properties/core/total_energy"
+description = "The total energy of the structure (eV)."
+product_of = "initial_structure"
+
+[workflow.outputs.cartesian_site_forces]
+entry_type = "records"
+role = "cartesian_site_forces"
+ref = "https://schemas.httk.org/defs/v0.1/properties/core/cartesian_site_forces"
+description = "The force on every site (eV/Angstrom), in the site order of the POSCAR."
+product_of = "initial_structure"
+
+[workflow.collect]
+file = "collect.py"

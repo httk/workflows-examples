@@ -15,6 +15,8 @@ from httk.workflow.scaffold import describe_package_runner, describe_runner
 from conftest import COMPILED, PACKAGES, REPO_ROOT, require_toolchain
 
 SCRIPTED = tuple(directory for directory in PACKAGES if directory not in COMPILED)
+# Workflow names that are not examples.<directory>.
+NAMES = {"ase-static": "ase.static"}
 
 
 @pytest.mark.parametrize("directory", SCRIPTED)
@@ -29,7 +31,7 @@ def test_package_loads_and_its_steps_equal_the_runners_own_description(directory
     assert os.access(entry, os.X_OK)
     described = describe_runner(entry)
     assert set(described["steps"]) == set(provider.steps)
-    assert described["workflow"] == provider.workflow_id == f"examples.{directory}"
+    assert described["workflow"] == provider.workflow_id == NAMES.get(directory, f"examples.{directory}")
 
 
 @pytest.mark.parametrize("directory", PACKAGES)
