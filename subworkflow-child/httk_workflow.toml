@@ -26,3 +26,8 @@ steps = ["root"]
 type = "number"
 default = 1
 description = "The number whose square root is written to root.txt; negative values fail the job."
+
+[workflow.retry_policy]
+# Restart a step whose manager was lost (e.g. drained at the end of an allocation).
+retry_on = ["owner_lost"]
+maximum_attempts_per_activation = 3

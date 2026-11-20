@@ -30,3 +30,8 @@ description = "The numbers to take roots of; one call of the child workflow per 
 # run.sh calls the alias `child`.
 [workflow.calls]
 child = "examples.subworkflow-child"
+
+[workflow.retry_policy]
+# Restart a step whose manager was lost (e.g. drained at the end of an allocation).
+retry_on = ["owner_lost"]
+maximum_attempts_per_activation = 3
