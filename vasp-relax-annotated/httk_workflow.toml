@@ -119,7 +119,7 @@ file = "instantiate.py"
 file = "collect.py"
 
 # Postprocess scripts are optional executables run on request after collection:
-#   httk workflow postprocess --workflow-dir vasp-relax-annotated --script summary ...
+#   httk postprocess --workflow-dir vasp-relax-annotated summary ...
 [workflow.postprocess.summary]
 file = "scripts/summary.py"
 description = "write summary.txt with the formula, spin choice, k-point density, and final energy"

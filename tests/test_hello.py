@@ -25,7 +25,7 @@ def test_hello_runs_from_the_command_line_with_its_default(
 ) -> None:
     workspace = Workspace.initialize(tmp_path / "workspace")
     name = register_ws(workspace.root)
-    arguments = ["job", "new", "--install", "--workspace", name, "--workflow-dir", str(REPO_ROOT / directory)]
+    arguments = ["job", "new", "--install", "--workspace", name, str(REPO_ROOT / directory)]
     assert command(arguments, CLIContext("httk", tmp_path)) == 0
     key, _ready = capsys.readouterr().out.strip().split("\t")
     run_idle(workspace)

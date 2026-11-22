@@ -14,8 +14,8 @@ Try it:
 
 .. code-block:: console
 
-    httk job new --install --workflow-dir ase-static --input structure=POSCAR
-    httk workflow run
+    httk job new --install ase-static --input structure=POSCAR
+    httk run
     httk collect
 """
 

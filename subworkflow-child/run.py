@@ -16,8 +16,8 @@ Try it on its own:
 
 .. code-block:: console
 
-    httk job new --install --workflow-dir subworkflow-child --parameter value=2
-    httk workflow run
+    httk job new --install subworkflow-child --parameter value=2
+    httk run
     httk job show KEY    # then read root.txt in the workdir it names
 """
 

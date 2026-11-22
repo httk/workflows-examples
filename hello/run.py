@@ -13,8 +13,8 @@ Try it:
 
 .. code-block:: console
 
-    httk job new --install --workflow-dir hello --parameter name=Ada   # prints KEY<tab>PAYLOAD
-    httk workflow run                                                    # runs until idle
+    httk job new --install hello --parameter name=Ada   # prints KEY<tab>PAYLOAD
+    httk run                                            # runs until idle
     httk job show KEY      # the payload moves as the job runs; its workdir/greeting.txt
 """
 

@@ -36,7 +36,7 @@ def test_the_trail_propagates_up_a_python_rust_python_chain(tmp_path: Path) -> N
     created = new_job(workspace, "examples.chain")
 
     # chain-rust is installed but not built here: the job is never claimed, and
-    # precheck (what `httk job why` / `httk workflow precheck` report) says why.
+    # precheck (what `httk job why` / `httk job precheck` report) says why.
     run_idle(workspace)
     assert resolve_job(workspace, created.job_id).state == "ready"
     (finding,) = [item for item in precheck_jobs(workspace) if item["job_id"] == created.job_id]

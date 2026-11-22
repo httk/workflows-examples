@@ -25,8 +25,8 @@ Why declare what is called: the dependency is then known before anything
 runs. Installing this workflow in a workspace (``httk workflow install``, or
 ``httk job new --install``) installs the declared calls too and records them by
 id; a manager does not claim the job until the called workflow is installed,
-and built if it is compiled, in its workspace (``httk job why`` and ``httk
-workflow precheck`` say what is missing); and at run time the job may call only
+and built if it is compiled, in its workspace (``httk job why`` and ``httk job
+precheck`` say what is missing); and at run time the job may call only
 what it declares, so a typo or a stray name in the code is refused rather than
 silently fetched. The name is resolved on the machine where the workflow is
 installed, so make the child known there (for example with ``httk plugin

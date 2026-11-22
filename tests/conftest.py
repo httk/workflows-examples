@@ -3,7 +3,7 @@
 The isolation fixtures and the normal/extended test-depth knob are those of
 workflows-vasp's ``tests/conftest.py``. The helpers run jobs the way a user
 does: :func:`httk.workflow.scaffold.new_job` on a package directory, installing
-it into the workspace first (what ``httk job new --install --workflow-dir``
+it into the workspace first (what ``httk job new --install DIR``
 calls), and a real
 :class:`httk.workflow.TaskManager` until the workspace is idle.
 """

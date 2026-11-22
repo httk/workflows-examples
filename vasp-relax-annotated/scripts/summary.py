@@ -7,7 +7,7 @@ What this example shows:
   ``[workflow.postprocess.NAME]``; it runs only when asked for, after a job
   has been collected::
 
-      httk workflow postprocess --workspace WS --workflow-dir vasp-relax-annotated --script summary
+      httk postprocess --workspace WS --workflow-dir vasp-relax-annotated summary
 
 * it learns where things are from environment variables:
   ``HTTK_WORKFLOW_JOB_DIR`` (the job payload, to be treated as read-only),

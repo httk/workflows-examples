@@ -7,8 +7,8 @@ any external code (EMT only knows a few metals: Al, Cu, Ag, Au, Ni, Pd, Pt,
 and H, C, N, O).
 
 ```console
-httk job new --install --workflow-dir ./ase-static --input structure=POSCAR
-httk workflow run
+httk job new --install ./ase-static --input structure=POSCAR
+httk run
 httk collect
 ```
 
@@ -25,7 +25,7 @@ into records without ASE.
 a machine-learned potential's ASE calculator:
 
 ```console
-httk job new --install --workflow-dir ./ase-static --input structure=POSCAR \
+httk job new --install ./ase-static --input structure=POSCAR \
     --parameter calculator=some_mlip.ase:Calculator --parameter calculator_kwargs=@kwargs.json
 ```
 

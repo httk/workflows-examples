@@ -24,7 +24,7 @@ What this example shows:
   after ``httk plugin install`` of this repository. The Rust workflow is
   compiled and must be *built* (managers never build): the install builds it
   unless given ``--no-build``, and until it is built a manager leaves a job of
-  this workflow unclaimed, ``httk job why`` / ``httk workflow precheck`` name
+  this workflow unclaimed, ``httk job why`` / ``httk job precheck`` name
   chain-rust as not built, and ``httk workflow build examples.chain-rust``
   builds it.
 

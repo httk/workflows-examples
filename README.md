@@ -47,40 +47,40 @@ A workflow must be installed in the workspace before jobs of it are created;
 commit (`httk workflow install` does the same on its own).
 
 ```console
-httk job new --install --workflow 'git+https://github.com/httk/workflows-examples#hello' --parameter name=Ada
-httk workflow run
+httk job new --install 'git+https://github.com/httk/workflows-examples#hello' --parameter name=Ada
+httk run
 ```
 
 `httk job new` prints the job key and the payload directory it was submitted
 to; the directory moves as the job changes state, and `httk job show KEY`
 names its current payload and workdir, where the greeting is in
 `run/greeting.txt` (`run/` is the job's workdir). Once
-installed, the short name works too: `httk job new --workflow examples.hello`.
+installed, the short name works too: `httk job new examples.hello`.
 
 The VASP examples take a structure file in any format httk reads, and need
 the VASP command as a workspace setting (or `HTTK_VASP_COMMAND`):
 
 ```console
-httk workspace settings set --key vasp.command --value vasp_std default
-httk job new --install --workflow 'git+https://github.com/httk/workflows-examples#vasp-relax-annotated' \
+httk workspace set -w default vasp.command=vasp_std
+httk job new --install 'git+https://github.com/httk/workflows-examples#vasp-relax-annotated' \
     --input structure=Si.cif
-httk workflow run
+httk run
 httk collect
-httk workflow postprocess --script summary --workflow-dir ./vasp-relax-annotated   # from a checkout
+httk postprocess summary --workflow-dir ./vasp-relax-annotated   # from a checkout
 ```
 
 Without VASP, name the mock instead:
-`--value "python3 $PWD/tests/mock_vasp.py"`.
+`vasp.command="python3 $PWD/tests/mock_vasp.py"`.
 
 ### From a local checkout
 
-`--workflow-dir` names a package directory, which is what you want while
+A package directory path is what you want while
 editing one; with `--install` it is (re)installed into the workspace first:
 
 ```console
-httk workflow describe ./vasp-relax-annotated
-httk job new --install --workflow-dir ./fan-out --parameter 'values=[1, 2, 3, 4]'
-httk workflow run
+httk workflow show ./vasp-relax-annotated
+httk job new --install ./fan-out --parameter 'values=[1, 2, 3, 4]'
+httk run
 ```
 
 A runner describes itself without running anything: `./hello/run.py --describe`.
@@ -106,8 +106,8 @@ installs its declared calls, resolved by name on the installing machine:
 
 ```console
 httk plugin install 'git+https://github.com/httk/workflows-examples'
-httk job new --install --workflow examples.subworkflow --parameter 'values=[1, 4, 9]'
-httk workflow run
+httk job new --install examples.subworkflow --parameter 'values=[1, 4, 9]'
+httk run
 ```
 
 The chain examples also need the Rust middle built in the workspace
@@ -116,8 +116,8 @@ with `httk workflow install --no-build` leaves its jobs unclaimed, and
 `httk job why` names chain-rust as not built until it is built:
 
 ```console
-httk job new --install --workflow examples.chain
-httk workflow run
+httk job new --install examples.chain
+httk run
 httk workflow build examples.chain-rust   # only after an install with --no-build, or to rebuild
 ```
 
@@ -194,7 +194,7 @@ make lint                    # ruff format/check (including the suffix-less inst
 
 The tests drive every package end to end through the real APIs: they install
 each package and create jobs with `httk.workflow.scaffold.new_job(...,
-install=True)` (what `httk job new --install --workflow-dir` calls), run a
+install=True)` (what `httk job new --install DIR` calls), run a
 real `TaskManager` until idle, and collect with `httk.workflow.collect`. The
 VASP examples run against `tests/mock_vasp.py`, which computes nothing: it
 writes plausible OUTCAR, OSZICAR and CONTCAR files (final energy -10.5 eV),

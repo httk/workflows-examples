@@ -26,8 +26,8 @@ Try it:
 
 .. code-block:: console
 
-    httk job new --install --workflow-dir two-step --parameter 'text=to be or not to be'
-    httk workflow run
+    httk job new --install two-step --parameter 'text=to be or not to be'
+    httk run
     httk job show KEY    # then read report.txt in the workdir it names
 """
 

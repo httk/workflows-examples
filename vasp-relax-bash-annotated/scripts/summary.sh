@@ -7,7 +7,7 @@
 # finds the job through $HTTK_WORKFLOW_JOB_DIR (read-only) and
 # $HTTK_WORKFLOW_WORKDIR. Run it with:
 #
-#   httk workflow postprocess --workspace WS --workflow-dir vasp-relax-bash-annotated --script summary
+#   httk postprocess --workspace WS --workflow-dir vasp-relax-bash-annotated summary
 set -euo pipefail
 
 workdir=${HTTK_WORKFLOW_WORKDIR:-$HTTK_WORKFLOW_JOB_DIR/run}

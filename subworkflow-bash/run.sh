@@ -23,7 +23,7 @@
 # Why declare what is called: the dependency is known before anything runs.
 # Installing this workflow in a workspace installs its declared calls too; a
 # manager does not claim the job until the child workflow is installed (and
-# built, if compiled) in its workspace (`httk job why` / `httk workflow
+# built, if compiled) in its workspace (`httk job why` / `httk job
 # precheck` explain); and at run time only declared calls are allowed. The
 # child's name must resolve where this workflow is installed (e.g. after
 # `httk plugin install` of this repository). To call a workflow

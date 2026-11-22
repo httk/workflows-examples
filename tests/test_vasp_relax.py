@@ -188,7 +188,6 @@ def test_the_command_line_passes_a_structure_path_to_the_hook(
         "--install",
         "--workspace",
         name,
-        "--workflow-dir",
         str(REPO_ROOT / "vasp-relax-annotated"),
         "--input",
         f"structure={_structure(tmp_path)}",
